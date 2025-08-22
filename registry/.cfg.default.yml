@@ -1,0 +1,25 @@
+server:
+  addr: ":8081"
+  read_timeout: 15
+  write_timeout: 15
+  idle_timeout: 60
+  domain: "https://tf.tesaco.sbs"
+
+log:
+  level: "debug"
+
+terraform:
+  registry_url: "https://registry.terraform.io"
+
+storage:
+  minio:
+    enabled: true
+    endpoint: "http://localhost:9000"
+    region: "us-east-1"
+    access_key: "minio"
+    secret_key: "minio12345"
+    bucket: "proxy-cache"
+    skip_ssl_verify: true
+
+  file:
+    path: "/data/registry"
