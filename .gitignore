@@ -159,3 +159,6 @@ coverage.out
 coverage.html
 gosec.sarif
 benchmark.txt
+
+# IDE
+.idea
