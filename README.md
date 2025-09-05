@@ -51,6 +51,7 @@ storage:
 > ** Note**
 >
 > The `server.domain` must use HTTPS with a valid SSL certificate. Terraform requires secure connections for provider downloads and will reject HTTP or self-signed certificates.
+> Or over nginx with ssl configured.
 
 ### Run
 
