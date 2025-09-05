@@ -34,11 +34,6 @@
             "label": "macOS Apple Silicon Binary"
           },
           {
-            "path": "dist/terrapeak-windows-amd64.exe",
-            "name": "terrapeak-windows-amd64.exe",
-            "label": "Windows AMD64 Binary"
-          },
-          {
             "path": "dist/checksums.txt",
             "name": "checksums.txt",
             "label": "SHA256 Checksums"

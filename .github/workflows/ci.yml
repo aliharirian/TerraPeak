@@ -99,7 +99,7 @@ jobs:
     - name: Build multi-arch Docker image
       uses: docker/build-push-action@v4
       with:
-        context: .
+        context: registry
         file: registry/Dockerfile
         platforms: linux/amd64,linux/arm64,darwin/amd64,darwin/arm64
         push: false
