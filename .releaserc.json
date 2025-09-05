@@ -1,0 +1,57 @@
+{
+  "branches": ["main"],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/changelog",
+      {
+        "changelogFile": "CHANGELOG.md"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "dist/terrapeak-linux-amd64",
+            "name": "terrapeak-linux-amd64",
+            "label": "Linux AMD64 Binary"
+          },
+          {
+            "path": "dist/terrapeak-linux-arm64",
+            "name": "terrapeak-linux-arm64",
+            "label": "Linux ARM64 Binary"
+          },
+          {
+            "path": "dist/terrapeak-darwin-amd64",
+            "name": "terrapeak-darwin-amd64",
+            "label": "macOS Intel Binary"
+          },
+          {
+            "path": "dist/terrapeak-darwin-arm64",
+            "name": "terrapeak-darwin-arm64",
+            "label": "macOS Apple Silicon Binary"
+          },
+          {
+            "path": "dist/terrapeak-windows-amd64.exe",
+            "name": "terrapeak-windows-amd64.exe",
+            "label": "Windows AMD64 Binary"
+          },
+          {
+            "path": "dist/checksums.txt",
+            "name": "checksums.txt",
+            "label": "SHA256 Checksums"
+          }
+        ]
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["CHANGELOG.md"],
+        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+      }
+    ]
+  ]
+}
