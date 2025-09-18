@@ -1,26 +1,29 @@
-version: "3.9"
-
 services:
-  TerraPeak:
-    build:
-      context: .
-      dockerfile: registry/Dockerfile
-    image: aliharirian/TerraPeak:latest
-    container_name: TerraPeak
+  terrapeak:
+    image: aliharirian/terrapeak:latest
+    container_name: terrapeak
     ports:
       - "8081:8081"
     volumes:
       - ./cfg.yml:/app/cfg.yml:ro
+      - terrapeak-data:/data
+    environment:
+      - LOG_LEVEL=info
+    networks:
+      - terrapeak-network
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/healthz"]
       interval: 10s
       timeout: 3s
       retries: 3
     restart: unless-stopped
+    depends_on:
+      minio:
+        condition: service_healthy
 
-  MinIO:
+  minio:
     image: minio/minio:latest
-    container_name: MinIO
+    container_name: minio
     ports:
       - 9000:9000
       - 9001:9001
@@ -41,8 +44,13 @@ services:
 
 networks:
   terrapeak-network:
+    name: terrapeak-network
     driver: bridge
 
 volumes:
   minio-data:
+    name: minio-data
+    driver: local
+  terrapeak-data:
+    name: terrapeak-data
     driver: local
