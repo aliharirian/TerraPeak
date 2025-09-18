@@ -1,9 +1,12 @@
 # TerraPeak
 
+[![CI](https://github.com/aliharirian/TerraPeak/actions/workflows/ci.yml/badge.svg)](https://github.com/aliharirian/TerraPeak/actions/workflows/ci.yml)
+
+---
+
 [![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=for-the-badge&logo=go)](https://golang.org/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://hub.docker.com/r/aliharirian/terrapeak)
-[![CI](https://github.com/aliharirian/TerraPeak/actions/workflows/ci.yml/badge.svg)](https://github.com/aliharirian/TerraPeak/actions/workflows/ci.yml)
 
 **A high-performance caching proxy for Terraform Registry that accelerates provider downloads with intelligent storage backends.**
 
