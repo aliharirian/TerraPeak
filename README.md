@@ -127,6 +127,8 @@ Apache2 License - see [LICENSE](LICENSE) file for details.
 - [x] Caching Mechanism
 - [x] MinIO Storage Backend
 - [x] Local Filesystem Storage Backend
+- [ ] Impliment go interface for store package
+- [ ] Support Http/Https/Socks5 Proxy
 - [ ] CI/CD Integration
 - [ ] Suppot for http or socks5 proxies
 - [ ] Advanced Caching Policies
