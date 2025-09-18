@@ -4,7 +4,6 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://hub.docker.com/r/aliharirian/terrapeak)
 [![CI](https://github.com/aliharirian/TerraPeak/workflows/CI/badge.svg)](https://github.com/aliharirian/TerraPeak/actions)
-[![Coverage](https://codecov.io/gh/aliharirian/TerraPeak/branch/main/graph/badge.svg)](https://codecov.io/gh/aliharirian/TerraPeak)
 
 **A high-performance caching proxy for Terraform Registry that accelerates provider downloads with intelligent storage backends.**
 
