@@ -122,7 +122,7 @@ Apache2 License - see [LICENSE](LICENSE) file for details.
 - Verify configuration file
 
 
-## RouadMap
+## Roadmap
 - [x] Core Proxy Functionality
 - [x] Caching Mechanism
 - [x] MinIO Storage Backend
