@@ -1,0 +1,24 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    user: root
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./default.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt
+    networks:
+      - terrapeak-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  terrapeak-network:
+    name: terrapeak-network
+    external: true
