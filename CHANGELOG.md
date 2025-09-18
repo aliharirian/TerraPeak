@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/aliharirian/TerraPeak/compare/v1.0.1...v1.1.0) (2025-09-18)
+
+
+### Features
+
+* add Nginx configuration with SSL support and Docker Compose setup for TerraPeak [skip ci] ([6c4f256](https://github.com/aliharirian/TerraPeak/commit/6c4f256ee828f12149c0ade4078bdf397b9bd15d))
+
 ## [1.0.1](https://github.com/aliharirian/TerraPeak/compare/v1.0.0...v1.0.1) (2025-09-18)
 
 
