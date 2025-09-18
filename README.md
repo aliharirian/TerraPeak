@@ -3,7 +3,7 @@
 [![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=for-the-badge&logo=go)](https://golang.org/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://hub.docker.com/r/aliharirian/terrapeak)
-[![CI](https://github.com/aliharirian/TerraPeak/workflows/CI/badge.svg)](https://github.com/aliharirian/TerraPeak/actions)
+[![CI](https://github.com/aliharirian/TerraPeak/actions/workflows/ci.yml/badge.svg)](https://github.com/aliharirian/TerraPeak/actions/workflows/ci.yml)
 
 **A high-performance caching proxy for Terraform Registry that accelerates provider downloads with intelligent storage backends.**
 
@@ -264,10 +264,10 @@ Need help? Here are your options:
 - [x] Local Filesystem Storage Backend
 - [x] Docker Compose Setup
 - [x] Nginx Reverse Proxy Configuration
+- [x] CI/CD Integration
 
 ### 🚧 In Progress
 - [ ] Implement Go interface for store package
-- [x] CI/CD Integration
 
 ### 📋 Planned
 - [ ] Support for HTTP/HTTPS/SOCKS5 Proxy
@@ -286,6 +286,6 @@ Need help? Here are your options:
 
 **⭐ Star this repository if you find it useful!**
 
-Made with ❤️ by [aliharirian](https://github.com/aliharirian)
+Made with ❤️ by [Ali Haririan](https://github.com/aliharirian)
 
 </div>
