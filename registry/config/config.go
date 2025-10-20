@@ -51,6 +51,11 @@ type Config struct {
 		Username string `yaml:"username"`
 		Password string `yaml:"password"`
 	} `yaml:"proxy"`
+
+	Cache struct {
+		AllowedHosts  []string `yaml:"allowed_hosts"`
+		SkipSSLVerify bool     `yaml:"skip_ssl_verify"`
+	} `yaml:"cache"`
 }
 
 var (

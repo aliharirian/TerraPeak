@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/aliharirian/TerraPeak/cache"
 	"github.com/aliharirian/TerraPeak/config"
 	"github.com/aliharirian/TerraPeak/logger"
 	"github.com/aliharirian/TerraPeak/metrics"
@@ -16,6 +17,7 @@ type Service struct {
 	cfg          *config.Config
 	store        *store.Store
 	proxyHandler *proxy.Handler
+	cacheHandler *cache.Handler
 }
 
 func New(cfg *config.Config) (*Service, error) {
@@ -54,14 +56,13 @@ func (s *Service) RegisterRoutes(router chi.Router) {
 	router.Get("/v1/providers/{namespace}/{name}/{version}/download/{os}/{arch}", s.GetProviderDownloadDetails)
 	//router.Get("/v1/modules/{name}", s.GetModule)
 
-	// Proxy and cache endpoints
-	router.Get("/*", func(w http.ResponseWriter, r *http.Request) { s.store.HandleRequest(w, r) })
-
 	// Proxy endpoints
 	router.HandleFunc("/proxy/http/*", s.proxyHandler.HandleHTTPProxy)
 	router.HandleFunc("/proxy/socks", s.HandleSOCKSProxy)
 	router.Get("/proxy/info", s.GetProxyInfo)
 
+	// Catch-all: delegate to existing store handler
+	router.Get("/*", func(w http.ResponseWriter, r *http.Request) { s.store.HandleRequest(w, r) })
 }
 
 func (s *Service) WellKnown(responseWriter http.ResponseWriter, request *http.Request) {
@@ -117,3 +118,6 @@ func (s *Service) GetProxyInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+// GetCacheStatus returns the current cache configuration and status
+// (Removed cache-specific endpoints that were previously added.)

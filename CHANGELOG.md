@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/aliharirian/TerraPeak/compare/v1.2.0...v1.2.1) (2025-10-20)
+
+
+### Bug Fixes
+
+* **registry:** implement interface store ([e6cfc00](https://github.com/aliharirian/TerraPeak/commit/e6cfc0079ef1c2512852e118574a5549a810f6a0))
+
 # [1.2.0](https://github.com/aliharirian/TerraPeak/compare/v1.1.0...v1.2.0) (2025-09-30)
 
 
