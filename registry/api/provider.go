@@ -126,15 +126,21 @@ func (s *Service) GetProviderDownloadDetails(w http.ResponseWriter, r *http.Requ
 }
 
 func AppFirstURL(base any, cacherURL string) any {
+	// Ensure base is a non-empty string
+	s, ok := base.(string)
+	if !ok || s == "" {
+		return base
+	}
+
 	// Parse the base URL
-	baseURL, err := url.Parse(base.(string))
-	if err != nil {
+	baseURL, err := url.Parse(s)
+	if err != nil || baseURL.Host == "" {
 		return base // Return original if parsing fails
 	}
 
 	// Parse the cacher URL
 	cacherURLParsed, err := url.Parse(cacherURL)
-	if err != nil {
+	if err != nil || cacherURLParsed.Host == "" {
 		return base // Return original if parsing fails
 	}
 

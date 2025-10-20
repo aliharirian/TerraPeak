@@ -11,6 +11,7 @@ import (
 	"github.com/aliharirian/TerraPeak/proxy"
 	"github.com/aliharirian/TerraPeak/store"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type Service struct {
@@ -54,6 +55,8 @@ func New(cfg *config.Config) (*Service, error) {
 }
 
 func (s *Service) RegisterRoutes(router chi.Router) {
+	// Route HEAD requests to GET handlers automatically (no body)
+	router.Use(middleware.GetHead)
 	// Root endpoint
 	router.Get("/", Hello)
 
