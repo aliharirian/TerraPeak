@@ -72,6 +72,17 @@ func createIntegrationTestConfig(tempDir string) *config.Config {
 				Path: tempDir,
 			},
 		},
+		Cache: struct {
+			AllowedHosts  []string `yaml:"allowed_hosts"`
+			SkipSSLVerify bool     `yaml:"skip_ssl_verify"`
+			Rewrites      []struct {
+				Prefix string `yaml:"prefix"`
+				Host   string `yaml:"host"`
+			} `yaml:"rewrites"`
+		}{
+			AllowedHosts:  []string{"github.com", "registry.terraform.io", "gitlab.com"},
+			SkipSSLVerify: true,
+		},
 		ServeIf: true,
 	}
 }

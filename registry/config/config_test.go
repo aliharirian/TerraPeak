@@ -57,6 +57,8 @@ server:
   addr: ":8081"
 log:
   level: "info"
+terraform:
+  registry_url: "https://registry.terraform.io"
 `,
 			expectedAddr:  ":8081",
 			expectedLevel: "info",
@@ -115,9 +117,27 @@ func TestConfigureWithInvalidFile(t *testing.T) {
 	global = nil
 	loadErr = nil
 
-	_, err := Configure("/nonexistent/path", zerolog.New(os.Stdout))
+	// Create a minimal config file with required fields
+	tmpFile, err := os.CreateTemp("", "minimal-config-*.yml")
 	if err != nil {
-		t.Errorf("Configure should not error on missing file, got: %v", err)
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	configContent := `
+server:
+  addr: ":8080"
+terraform:
+  registry_url: "https://registry.terraform.io"
+`
+	if _, err := tmpFile.WriteString(configContent); err != nil {
+		t.Fatalf("Failed to write config content: %v", err)
+	}
+	tmpFile.Close()
+
+	_, err = Configure(tmpFile.Name(), zerolog.New(os.Stdout))
+	if err != nil {
+		t.Errorf("Configure should not error with valid config, got: %v", err)
 	}
 }
 
@@ -174,6 +194,8 @@ server:
   addr: ":9999"
 log:
   level: "warn"
+terraform:
+  registry_url: "https://registry.terraform.io"
 `
 	if _, err := tmpFile.WriteString(configContent); err != nil {
 		t.Fatalf("Failed to write config: %v", err)
@@ -209,9 +231,15 @@ func TestConfigDefaults(t *testing.T) {
 	}
 	defer os.Remove(tmpFile.Name())
 
-	// Write minimal config
-	if _, err := tmpFile.WriteString("{}"); err != nil {
-		t.Fatalf("Failed to write empty config: %v", err)
+	// Write minimal config with required fields
+	configContent := `
+server:
+  addr: ":8080"
+terraform:
+  registry_url: "https://registry.terraform.io"
+`
+	if _, err := tmpFile.WriteString(configContent); err != nil {
+		t.Fatalf("Failed to write config: %v", err)
 	}
 	tmpFile.Close()
 

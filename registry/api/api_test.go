@@ -57,6 +57,17 @@ func createTestConfig() *config.Config {
 				Path: "./test-registry",
 			},
 		},
+		Cache: struct {
+			AllowedHosts  []string `yaml:"allowed_hosts"`
+			SkipSSLVerify bool     `yaml:"skip_ssl_verify"`
+			Rewrites      []struct {
+				Prefix string `yaml:"prefix"`
+				Host   string `yaml:"host"`
+			} `yaml:"rewrites"`
+		}{
+			AllowedHosts:  []string{"github.com", "registry.terraform.io", "gitlab.com"},
+			SkipSSLVerify: true,
+		},
 	}
 }
 

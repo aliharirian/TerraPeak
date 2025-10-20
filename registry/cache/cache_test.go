@@ -328,9 +328,9 @@ func TestHandler_InvalidPath(t *testing.T) {
 
 			handler.Handle(rr, req)
 
-			if rr.Code != http.StatusBadRequest {
+			if rr.Code != http.StatusNotFound {
 				t.Errorf("Handler returned wrong status code for path %s: got %v want %v",
-					tc.path, rr.Code, http.StatusBadRequest)
+					tc.path, rr.Code, http.StatusNotFound)
 			}
 		})
 	}

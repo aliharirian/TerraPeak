@@ -8,6 +8,10 @@ server:
 log:
   level: "info"
 
+# Terraform registry configuration
+terraform:
+  registry_url: "https://registry.terraform.io"
+
 # Cache configuration for external API proxying
 cache:
   allowed_hosts:
@@ -18,7 +22,7 @@ cache:
     - registry.terraform.io
     - releases.hashicorp.com
     - checkpoint-api.hashicorp.com
-    # - galaxy.ansible.com
+    - galaxy.ansible.com
   # Skip SSL certificate verification (use only for development or trusted hosts)
   skip_ssl_verify: true
 

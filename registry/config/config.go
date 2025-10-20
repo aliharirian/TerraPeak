@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"sync"
 
@@ -55,7 +56,37 @@ type Config struct {
 	Cache struct {
 		AllowedHosts  []string `yaml:"allowed_hosts"`
 		SkipSSLVerify bool     `yaml:"skip_ssl_verify"`
+		Rewrites      []struct {
+			Prefix string `yaml:"prefix"`
+			Host   string `yaml:"host"`
+		} `yaml:"rewrites"`
 	} `yaml:"cache"`
+}
+
+// Validate checks if the configuration is valid
+func (c *Config) Validate(logger zerolog.Logger) error {
+	if c.Terraform.RegistryUrl == "" {
+		logger.Error().Msg("terraform.registry_url is required but not set")
+		return errors.New("terraform.registry_url is required")
+	}
+
+	if c.Server.Addr == "" {
+		logger.Error().Msg("server.addr is required but not set")
+		return errors.New("server.addr is required")
+	}
+
+	// Validate cache config if any allowed hosts are set
+	if len(c.Cache.AllowedHosts) == 0 {
+		logger.Warn().Msg("cache.allowed_hosts is empty - cache functionality will be limited")
+	}
+
+	logger.Debug().
+		Str("registry_url", c.Terraform.RegistryUrl).
+		Str("server_addr", c.Server.Addr).
+		Int("allowed_hosts", len(c.Cache.AllowedHosts)).
+		Msg("Configuration validated successfully")
+
+	return nil
 }
 
 var (
@@ -102,6 +133,12 @@ func Configure(userPath string, logger zerolog.Logger) (*Config, error) {
 			} else {
 				logger.Warn().Str("path", userPath).Err(err).Msg("user config file not found; using defaults only")
 			}
+		}
+
+		// Validate the configuration
+		if err := cfg.Validate(logger); err != nil {
+			loadErr = err
+			return
 		}
 
 		global = cfg

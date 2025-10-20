@@ -17,7 +17,7 @@ type Service struct {
 	cfg          *config.Config
 	store        *store.Store
 	proxyHandler *proxy.Handler
-	cacheHandler *cache.Handler
+    cacheHandler *cache.Handler
 }
 
 func New(cfg *config.Config) (*Service, error) {
@@ -35,11 +35,22 @@ func New(cfg *config.Config) (*Service, error) {
 		return nil, err
 	}
 
-	return &Service{
-		cfg:          cfg,
-		store:        st,
-		proxyHandler: proxyHandler,
-	}, nil
+    // Initialize cache handler
+    cacheHandler, err := cache.NewCacheHandler(st, &cache.Config{
+        AllowedHosts:  cfg.Cache.AllowedHosts,
+        SkipSSLVerify: cfg.Cache.SkipSSLVerify,
+    })
+    if err != nil {
+        logger.Errorf("Failed to initialize cache handler: %v", err)
+        return nil, err
+    }
+
+    return &Service{
+        cfg:          cfg,
+        store:        st,
+        proxyHandler: proxyHandler,
+        cacheHandler: cacheHandler,
+    }, nil
 }
 
 func (s *Service) RegisterRoutes(router chi.Router) {
@@ -61,8 +72,11 @@ func (s *Service) RegisterRoutes(router chi.Router) {
 	router.HandleFunc("/proxy/socks", s.HandleSOCKSProxy)
 	router.Get("/proxy/info", s.GetProxyInfo)
 
-	// Catch-all: delegate to existing store handler
-	router.Get("/*", func(w http.ResponseWriter, r *http.Request) { s.store.HandleRequest(w, r) })
+    // Mount cache handler for allowed hosts only
+    for _, host := range s.cfg.Cache.AllowedHosts {
+        router.HandleFunc("/"+host, s.cacheHandler.Handle)
+        router.HandleFunc("/"+host+"/*", s.cacheHandler.Handle)
+    }
 }
 
 func (s *Service) WellKnown(responseWriter http.ResponseWriter, request *http.Request) {
