@@ -1,12 +1,14 @@
 package cache
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // ProxyRequest contains all the information needed to proxy a request
@@ -80,11 +82,11 @@ func (pr *ProxyRequest) BuildUpstreamURL() string {
 
 // MakeUpstreamRequest performs the actual HTTP request to the upstream server
 func MakeUpstreamRequest(proxyReq *ProxyRequest) (*ProxyResponse, error) {
-	return MakeUpstreamRequestWithConfig(proxyReq, false)
+	return MakeUpstreamRequestWithConfig(proxyReq, nil, false)
 }
 
 // MakeUpstreamRequestWithConfig performs the actual HTTP request to the upstream server with custom configuration
-func MakeUpstreamRequestWithConfig(proxyReq *ProxyRequest, skipSSLVerify bool) (*ProxyResponse, error) {
+func MakeUpstreamRequestWithConfig(proxyReq *ProxyRequest, httpClient *http.Client, skipSSLVerify bool) (*ProxyResponse, error) {
 	if proxyReq == nil {
 		return nil, fmt.Errorf("proxy request cannot be nil")
 	}
@@ -100,14 +102,25 @@ func MakeUpstreamRequestWithConfig(proxyReq *ProxyRequest, skipSSLVerify bool) (
 	// Copy headers (excluding hop-by-hop headers)
 	copyHeaders(req.Header, proxyReq.Headers)
 
-	// Create HTTP client with optional SSL verification skip
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: skipSSLVerify,
-			},
-		},
+	// Prefer injected client; otherwise create a minimal client honoring env proxy and TLS skip
+	client := httpClient
+	if client == nil {
+		transport := &http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipSSLVerify},
+		}
+		client = &http.Client{Transport: transport}
+	} else {
+		// Clone and disable global timeout; control timeout with context per request
+		cloned := *client
+		cloned.Timeout = 0
+		client = &cloned
 	}
+
+	// Per-request timeout (allow large artifact downloads)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	req = req.WithContext(ctx)
 
 	resp, err := client.Do(req)
 	if err != nil {

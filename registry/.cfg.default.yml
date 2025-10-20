@@ -22,9 +22,8 @@ cache:
     - registry.terraform.io
     - releases.hashicorp.com
     - checkpoint-api.hashicorp.com
-    - galaxy.ansible.com
   # Skip SSL certificate verification (use only for development or trusted hosts)
-  skip_ssl_verify: true
+  skip_ssl_verify: false
 
 # Storage backend configuration
 storage:

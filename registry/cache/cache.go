@@ -17,8 +17,9 @@ type StoreInterface interface {
 
 // Handler handles HTTP requests with transparent caching and proxying
 type Handler struct {
-	store  StoreInterface
-	config *Config
+	store      StoreInterface
+	config     *Config
+	httpClient *http.Client
 }
 
 // NewCacheHandler creates a new cache handler with the given store and configuration
@@ -34,9 +35,26 @@ func NewCacheHandler(store StoreInterface, config *Config) (*Handler, error) {
 		return nil, fmt.Errorf("invalid cache config: %w", err)
 	}
 
+	return NewCacheHandlerWithClient(store, config, nil)
+}
+
+// NewCacheHandlerWithClient creates a new cache handler with injected HTTP client
+func NewCacheHandlerWithClient(store StoreInterface, config *Config, httpClient *http.Client) (*Handler, error) {
+	if store == nil {
+		return nil, fmt.Errorf("store cannot be nil")
+	}
+	if config == nil {
+		return nil, fmt.Errorf("config cannot be nil")
+	}
+
+	if err := config.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid cache config: %w", err)
+	}
+
 	return &Handler{
-		store:  store,
-		config: config,
+		store:      store,
+		config:     config,
+		httpClient: httpClient,
 	}, nil
 }
 
@@ -100,7 +118,7 @@ func (h *Handler) serveCachedContent(w http.ResponseWriter, cacheKey string) {
 // proxyAndCache proxies the request to upstream server and caches the successful response
 func (h *Handler) proxyAndCache(w http.ResponseWriter, proxyReq *ProxyRequest, cacheKey string) {
 	// Make upstream request with SSL verification config
-	resp, err := MakeUpstreamRequestWithConfig(proxyReq, h.config.SkipSSLVerify)
+	resp, err := MakeUpstreamRequestWithConfig(proxyReq, h.httpClient, h.config.SkipSSLVerify)
 	if err != nil {
 		logger.Errorf("Upstream request failed for %s: %v", proxyReq.Host, err)
 		http.Error(w, "Upstream server error", http.StatusBadGateway)
