@@ -1,7 +1,7 @@
 server:
   addr: ":8081"
-  read_timeout: 30
-  write_timeout: 30
+  read_timeout: 60
+  write_timeout: 60
   idle_timeout: 60
   domain: "localhost"
 
