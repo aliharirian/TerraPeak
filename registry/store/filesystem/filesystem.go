@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/aliharirian/TerraPeak/config"
@@ -158,4 +159,96 @@ func (s *Storage) SaveMetadata(filePath, md5Sum, sha256Sum string, size int64) e
 
 	logger.Debugf("Metadata and success tag saved: %s", metadataPath)
 	return nil
+}
+// Move renames (moves) a file or directory to a new path
+func (s *Storage) Move(oldPath, newPath string) error {
+	fullOldPath := filepath.Join(s.basePath, oldPath)
+	fullNewPath := filepath.Join(s.basePath, newPath)
+	logger.Debugf("Moving from %s to %s", fullOldPath, fullNewPath)
+
+	// Rename (move) the file or directory
+	err := os.Rename(fullOldPath, fullNewPath)
+	if err != nil {
+		logger.Errorf("Failed to move %s to %s: %v", fullOldPath, fullNewPath, err)
+		return err
+	}
+
+	logger.Infof("Successfully moved %s to %s", oldPath, newPath)
+	return nil
+}
+
+// Delete removes a file or directory
+func (s *Storage) Delete(filePath string) error {
+	fullPath := filepath.Join(s.basePath, filePath)
+	logger.Debugf("Deleting file or directory: %s", fullPath)
+
+	// Remove the file or directory
+	err := os.RemoveAll(fullPath)
+	if err != nil {
+		logger.Errorf("Failed to delete %s: %v", fullPath, err)
+		return err
+	}
+
+	logger.Infof("Successfully deleted %s", filePath)
+	return nil
+}
+
+// Copy copies a file or directory to a new location
+func (s *Storage) Copy(srcPath, destPath string) error {
+	fullSrcPath := filepath.Join(s.basePath, srcPath)
+	fullDestPath := filepath.Join(s.basePath, destPath)
+	logger.Debugf("Copying from %s to %s", fullSrcPath, fullDestPath)
+
+	// Ensure destination directory exists
+	if err := os.MkdirAll(filepath.Dir(fullDestPath), 0755); err != nil {
+		logger.Errorf("Failed to create directories for %s: %v", fullDestPath, err)
+		return err
+	}
+
+	// Copy the file or directory
+	err := os.Rename(fullSrcPath, fullDestPath)
+	if err != nil {
+		logger.Errorf("Failed to copy %s to %s: %v", fullSrcPath, fullDestPath, err)
+		return err
+	}
+
+	logger.Infof("Successfully copied %s to %s", srcPath, destPath)
+	return nil
+}
+
+// Clear clears the storage by deleting all files and directories
+func (s *Storage) Clear() error {
+	logger.Infof("Clearing storage at: %s", s.basePath)
+
+	// Remove all files and directories
+	err := os.RemoveAll(s.basePath)
+	if err != nil {
+		logger.Errorf("Failed to clear storage: %v", err)
+		return err
+	}
+
+	// Recreate the base directory
+	err = os.MkdirAll(s.basePath, 0755)
+	if err != nil {
+		logger.Errorf("Failed to recreate base directory %s: %v", s.basePath, err)
+		return err
+	}
+
+	logger.Infof("Storage cleared successfully")
+	return nil
+}
+
+// PathJoin joins base path with given file path
+func (s *Storage) PathJoin(filePath string) string {
+	return filepath.Join(s.basePath, filePath)
+}
+
+// IsSuccessTag checks if the file is a success tag
+func (s *Storage) IsSuccessTag(filePath string) bool {
+	return strings.HasSuffix(filePath, ".success")
+}
+
+// IsMetadataFile checks if the file is a metadata file
+func (s *Storage) IsMetadataFile(filePath string) bool {
+	return strings.HasSuffix(filePath, ".metadata.json")
 }

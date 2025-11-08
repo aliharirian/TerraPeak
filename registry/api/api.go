@@ -55,16 +55,42 @@ func New(cfg *config.Config) (*Service, error) {
 }
 
 func (s *Service) RegisterRoutes(router chi.Router) {
-	// Route HEAD requests to GET handlers automatically (no body)
+	// Global middleware
 	router.Use(middleware.GetHead)
+	router.Use(CORSMiddleware([]string{"*"})) // Allow all origins for development
+	router.Use(APIVersionMiddleware("v1"))
+	router.Use(RequestLoggingMiddleware)
+
 	// Root endpoint
 	router.Get("/", Hello)
 
-	// Health & Metrics endpoint
+	// Health & Metrics endpoints
 	router.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { metrics.Health(w) })
 	router.Get("/metrics", func(w http.ResponseWriter, r *http.Request) { metrics.Metrics() })
 
-	// Terraform registry endpoints
+	// API v1 routes
+	router.Route("/api/v1", func(r chi.Router) {
+		// Health check endpoint
+		r.Get("/health", s.HealthCheck)
+		
+		// Storage statistics
+		r.Get("/storage/stats", s.GetStorageStats)
+		
+		// Unified storage endpoints (works with both filesystem and S3)
+		r.Get("/objects", s.ListObjects)
+		r.Get("/objects/*", s.GetObject)
+		
+		// Legacy filesystem endpoints (deprecated)
+		r.Get("/files", s.ListFiles)
+		r.Get("/files/*", s.GetFile)
+		
+		// Legacy S3 endpoints (deprecated)
+		r.Get("/s3/buckets", s.ListS3Buckets)
+		r.Get("/s3/buckets/{bucket}", s.ListS3Objects)
+		r.Get("/s3/objects/{bucket}/*", s.GetS3Object)
+	})
+
+	// Terraform registry endpoints (legacy)
 	router.Get("/.well-known/terraform.json", s.WellKnown)
 	router.Get("/v1/providers/{namespace}/{name}/versions", s.GetVersionList)
 	router.Get("/v1/providers/{namespace}/{name}/{version}/download/{os}/{arch}", s.GetProviderDownloadDetails)
