@@ -32,8 +32,10 @@ func (s *Service) GetVersionList(w http.ResponseWriter, r *http.Request) {
 	logger.Infof("Cache MISS: Fetching version list for %s/%s from upstream", namespace, name)
 	upstreamURL := s.cfg.Terraform.RegistryUrl + "/v1/providers/" + namespace + "/" + name + "/versions"
 
-	resp, err := http.Get(upstreamURL)
+	// Use proxy-aware client for upstream request
+	resp, err := s.proxyHandler.GetClient().Get(upstreamURL)
 	if err != nil {
+		logger.Errorf("Failed to fetch version list from upstream %s: %v", upstreamURL, err)
 		http.Error(w, "upstream unreachable", http.StatusBadGateway)
 		return
 	}
@@ -80,8 +82,10 @@ func (s *Service) GetProviderDownloadDetails(w http.ResponseWriter, r *http.Requ
 	logger.Infof("Cache MISS: Fetching download details for %s/%s/%s/%s/%s from upstream", namespace, name, version, os, arch)
 	upstreamURL := s.cfg.Terraform.RegistryUrl + "/v1/providers/" + namespace + "/" + name + "/" + version + "/download/" + os + "/" + arch
 
-	resp, err := http.Get(upstreamURL)
+	// Use proxy-aware client for upstream request
+	resp, err := s.proxyHandler.GetClient().Get(upstreamURL)
 	if err != nil {
+		logger.Errorf("Failed to fetch download details from upstream %s: %v", upstreamURL, err)
 		http.Error(w, "upstream unreachable", http.StatusBadGateway)
 		return
 	}
@@ -122,15 +126,21 @@ func (s *Service) GetProviderDownloadDetails(w http.ResponseWriter, r *http.Requ
 }
 
 func AppFirstURL(base any, cacherURL string) any {
+	// Ensure base is a non-empty string
+	s, ok := base.(string)
+	if !ok || s == "" {
+		return base
+	}
+
 	// Parse the base URL
-	baseURL, err := url.Parse(base.(string))
-	if err != nil {
+	baseURL, err := url.Parse(s)
+	if err != nil || baseURL.Host == "" {
 		return base // Return original if parsing fails
 	}
 
 	// Parse the cacher URL
 	cacherURLParsed, err := url.Parse(cacherURL)
-	if err != nil {
+	if err != nil || cacherURLParsed.Host == "" {
 		return base // Return original if parsing fails
 	}
 

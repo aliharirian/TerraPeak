@@ -42,7 +42,7 @@ func createIntegrationTestConfig(tempDir string) *config.Config {
 			RegistryUrl: "https://registry.terraform.io",
 		},
 		Storage: struct {
-			Minio struct {
+			S3 struct {
 				Enabled   bool   `yaml:"enabled"`
 				Endpoint  string `yaml:"endpoint"`
 				Region    string `yaml:"region"`
@@ -50,12 +50,12 @@ func createIntegrationTestConfig(tempDir string) *config.Config {
 				SecretKey string `yaml:"secret_key"`
 				Bucket    string `yaml:"bucket"`
 				SkipSSL   bool   `yaml:"skip_ssl_verify"`
-			} `yaml:"minio"`
+			} `yaml:"s3"`
 			File struct {
 				Path string `yaml:"path"`
 			} `yaml:"file"`
 		}{
-			Minio: struct {
+			S3: struct {
 				Enabled   bool   `yaml:"enabled"`
 				Endpoint  string `yaml:"endpoint"`
 				Region    string `yaml:"region"`
@@ -71,6 +71,17 @@ func createIntegrationTestConfig(tempDir string) *config.Config {
 			}{
 				Path: tempDir,
 			},
+		},
+		Cache: struct {
+			AllowedHosts  []string `yaml:"allowed_hosts"`
+			SkipSSLVerify bool     `yaml:"skip_ssl_verify"`
+			Rewrites      []struct {
+				Prefix string `yaml:"prefix"`
+				Host   string `yaml:"host"`
+			} `yaml:"rewrites"`
+		}{
+			AllowedHosts:  []string{"github.com", "registry.terraform.io", "gitlab.com"},
+			SkipSSLVerify: true,
 		},
 		ServeIf: true,
 	}
@@ -362,5 +373,3 @@ func TestConcurrentRequests(t *testing.T) {
 		}
 	}
 }
-
-

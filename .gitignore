@@ -11,6 +11,10 @@
 *.dll
 *.so
 *.dylib
+terrapeak
+terrapeak-linux
+registry/terrapeak
+registry/terrapeak-linux
 
 # Test binary, built with `go test -c`
 *.test

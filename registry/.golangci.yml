@@ -1,0 +1,10 @@
+linters:
+  disable-all: true
+  enable:
+    - gofmt
+    - misspell
+
+run:
+  timeout: 5m
+  tests: false
+  modules-download-mode: readonly

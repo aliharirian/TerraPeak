@@ -21,7 +21,7 @@ The easiest way to get started with TerraPeak:
 git clone https://github.com/aliharirian/TerraPeak.git
 cd TerraPeak
 
-# Start TerraPeak with MinIO storage backend
+# Start TerraPeak with S3/MinIO storage backend
 docker-compose up -d
 
 # Check if services are running
@@ -29,7 +29,7 @@ docker-compose ps
 ```
 
 This will start:
-- **TerraPeak** on port `8081` with MinIO caching
+- **TerraPeak** on port `8081` with S3/MinIO caching
 - **MinIO** object storage on ports `9000` (API) and `9001` (Console)
 - **Nginx** reverse proxy with SSL termination (if configured on `.nginx/docker-compose.yml` path)
 
@@ -60,7 +60,7 @@ go build -o terrapeak
 ```
 Or useing builded bainary file on Github Packages.
 
-> **💡 Pro Tip**: Use Docker Compose for the complete setup with MinIO storage backend and nginx reverse proxy.
+> **💡 Pro Tip**: Use Docker Compose for the complete setup with S3/MinIO storage backend and nginx reverse proxy.
 
 ## ⚙️ Configuration
 
@@ -78,17 +78,17 @@ terraform:
   registry_url: "https://registry.terraform.io"  # Upstream registry
 
 storage:
-  # If you want to use Minio Object Storage
-  minio:
-    enabled: true                  # Enable MinIO object storage
-    endpoint: "http://minio:9000"  # MinIO server endpoint
-    region: "us-east-1"            # AWS region for MinIO
-    access_key: "minioadmin"       # MinIO access key
-    secret_key: "minioadmin"       # MinIO secret key
+  # If you want to use S3/MinIO Object Storage
+  s3:
+    enabled: true                  # Enable S3/MinIO object storage
+    endpoint: "http://minio:9000"  # S3/MinIO server endpoint
+    region: "us-east-1"            # AWS region for S3/MinIO
+    access_key: "minioadmin"       # S3/MinIO access key
+    secret_key: "minioadmin"       # S3/MinIO secret key
     bucket: "proxy-cache"          # Storage bucket name
     skip_ssl_verify: true          # Skip SSL verification (dev only)
 
-  # If you want to use File Storage disable Minio Storage
+  # If you want to use File Storage disable S3 Storage
   file:
     path: "/data/registry"         # Local filesystem path
 
@@ -214,7 +214,8 @@ curl "https://tp.example.com/proxy/info"
 ### 🚀 Performance & Reliability
 - **Intelligent Caching**: Automatic provider caching with configurable storage backends
 - **High Performance**: Sub-second response times for cached content
-- **Dual Storage**: MinIO object storage or local filesystem support
+- **Flexible Storage**: S3/MinIO object storage or local filesystem support
+- **Interface-Based Architecture**: Clean separation of storage backends with Go interfaces
 - **Drop-in Replacement**: Fully compatible with Terraform Registry API
 - **Proxy Support**: Outbound proxy client for corporate environments
 
@@ -225,9 +226,10 @@ curl "https://tp.example.com/proxy/info"
 - **SSL Ready**: HTTPS support with reverse proxy configuration
 
 ### 🔧 Storage Options
-- **MinIO Integration**: Scalable object storage for production environments
+- **S3/MinIO Integration**: Scalable object storage for production environments
 - **Local Filesystem**: Simple file-based caching for development
-- **Configurable Backends**: Easy switching between storage types
+- **Interface-Based Design**: Clean Go interfaces for easy backend switching
+- **Automatic Selection**: Smart backend selection based on configuration
 
 ### 🌐 Proxy Capabilities
 - **Outbound Proxy Client**: Route HTTP requests through HTTP, SOCKS4, or SOCKS5 proxies
@@ -246,7 +248,7 @@ curl "https://tp.example.com/proxy/info"
                               ▼
                        ┌──────────────┐
                        │   Storage    │
-                       │  (MinIO/FS)  │
+                       │ (S3/FS/...)  │
                        └──────────────┘
 
 ┌─────────────────┐    ┌──────────────┐    ┌─────────────────┐
@@ -261,6 +263,13 @@ curl "https://tp.example.com/proxy/info"
 3. If not cached, fetches from upstream registry (optionally through corporate proxy)
 4. Caches the provider for future requests
 5. Returns provider to Terraform
+
+**Storage Architecture:**
+- **Interface-Based Design**: Clean Go interfaces (`Storage`) for all storage backends
+- **Automatic Selection**: Smart backend selection based on configuration
+- **S3/MinIO Backend**: Scalable object storage for production environments
+- **Filesystem Backend**: Simple file-based caching for development
+- **Extensible**: Easy to add new storage backends by implementing the `Storage` interface
 
 **Proxy functionality:**
 - **Outbound**: TerraPeak can route all HTTP requests through configured corporate proxies
@@ -290,14 +299,64 @@ We welcome contributions! Here's how to get started:
 git clone https://github.com/yourusername/TerraPeak.git
 cd TerraPeak
 
+# Setup development environment
+make dev-setup
+
 # Build and test
-cd registry
-go build -o terrapeak
-go test ./...
+make build
+make test
 
 # Run with development config
-./terrapeak -c ../cfg.yml
+make run-dev
 ```
+
+### 🔧 Development Workflow
+
+TerraPeak includes comprehensive development tools and pre-commit checks:
+
+#### **Pre-Commit Commands**
+```bash
+# Standard pre-commit checks (recommended)
+make pre-commit
+
+# Quick checks for development
+make pre-commit-quick
+
+# Full comprehensive checks
+make pre-commit-full
+```
+
+#### **Available Make Commands**
+```bash
+# Development
+make dev-setup          # Setup development environment
+make build              # Build the application
+make test               # Run all tests
+make test-unit          # Run unit tests only
+make test-integration   # Run integration tests
+make test-coverage      # Run tests with coverage
+make test-api           # Test API endpoints
+make fmt                # Format code
+make vet                # Run go vet
+make lint               # Run linter
+make clean              # Clean build artifacts
+
+# Docker
+make docker-build       # Build Docker image
+make docker-run         # Run in Docker
+make docker-compose-up  # Start with docker-compose
+
+# Git workflow
+make git-commit         # Run checks and prepare commit
+make git-push           # Run full checks and prepare push
+```
+
+#### **Code Quality**
+- **Automatic Formatting**: Code is automatically formatted with `go fmt`
+- **Linting**: Comprehensive linting with golangci-lint
+- **Testing**: Unit, integration, and API tests with coverage
+- **Interface Design**: Clean Go interfaces for storage backends
+- **Pre-commit Hooks**: Automated quality checks before commits
 
 ## 📄 License
 
@@ -321,8 +380,9 @@ Need help? Here are your options:
 ### ✅ Completed
 - [x] Core Proxy Functionality
 - [x] Caching Mechanism
-- [x] MinIO Storage Backend
+- [x] S3/MinIO Storage Backend
 - [x] Local Filesystem Storage Backend
+- [x] Go Interface Architecture for Storage
 - [x] Docker Compose Setup
 - [x] Nginx Reverse Proxy Configuration
 - [x] CI/CD Integration
@@ -330,9 +390,9 @@ Need help? Here are your options:
 - [x] Outbound Proxy Client
 - [x] Inbound Proxy Server
 - [x] Proxy Authentication
-
-### 🚧 In Progress
-- [ ] Implement Go interface for store package
+- [x] Pre-commit Workflow
+- [x] Development Environment Setup
+- [x] Comprehensive Testing Suite
 
 ### 📋 Planned
 - [ ] Web Interface for Management

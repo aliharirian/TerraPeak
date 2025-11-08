@@ -2,8 +2,6 @@ package store
 
 import (
 	"bytes"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,7 +12,7 @@ import (
 func createTestConfig(tempDir string) *config.Config {
 	return &config.Config{
 		Storage: struct {
-			Minio struct {
+			S3 struct {
 				Enabled   bool   `yaml:"enabled"`
 				Endpoint  string `yaml:"endpoint"`
 				Region    string `yaml:"region"`
@@ -22,12 +20,12 @@ func createTestConfig(tempDir string) *config.Config {
 				SecretKey string `yaml:"secret_key"`
 				Bucket    string `yaml:"bucket"`
 				SkipSSL   bool   `yaml:"skip_ssl_verify"`
-			} `yaml:"minio"`
+			} `yaml:"s3"`
 			File struct {
 				Path string `yaml:"path"`
 			} `yaml:"file"`
 		}{
-			Minio: struct {
+			S3: struct {
 				Enabled   bool   `yaml:"enabled"`
 				Endpoint  string `yaml:"endpoint"`
 				Region    string `yaml:"region"`
@@ -63,7 +61,7 @@ func TestNew(t *testing.T) {
 	}
 
 	if store == nil {
-		t.Error("Expected non-nil store")
+		t.Fatal("Expected non-nil store")
 	}
 
 	if store.config != cfg {
@@ -185,133 +183,11 @@ func TestReadFromStorage(t *testing.T) {
 	}
 }
 
-func TestGenerateURL(t *testing.T) {
-	cfg := createTestConfig("/tmp")
-	store, err := New(cfg)
-	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
-	}
+// TestGenerateURL removed - generateURL method was moved to cache package
 
-	tests := []struct {
-		name         string
-		requestURL   string
-		expectedDown string
-		expectedPath string
-	}{
-		{
-			name:         "simple path",
-			requestURL:   "/github.com/hashicorp/terraform/archive/v1.0.0.tar.gz",
-			expectedDown: "https://github.com/hashicorp/terraform/archive/v1.0.0.tar.gz",
-			expectedPath: "github.com/hashicorp/terraform/archive/v1.0.0.tar.gz",
-		},
-		{
-			name:         "provider path",
-			requestURL:   "/releases.hashicorp.com/terraform-provider-aws/5.0.0/terraform-provider-aws_5.0.0_linux_amd64.zip",
-			expectedDown: "https://releases.hashicorp.com/terraform-provider-aws/5.0.0/terraform-provider-aws_5.0.0_linux_amd64.zip",
-			expectedPath: "releases.hashicorp.com/terraform-provider-aws/5.0.0/terraform-provider-aws_5.0.0_linux_amd64.zip",
-		},
-	}
+// TestParseS3Endpoint removed - parseS3Endpoint is now in s3 package
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			downURL, filePath := store.generateURL(tt.requestURL)
-
-			if downURL != tt.expectedDown {
-				t.Errorf("Expected download URL %s, got %s", tt.expectedDown, downURL)
-			}
-
-			if filePath != tt.expectedPath {
-				t.Errorf("Expected file path %s, got %s", tt.expectedPath, filePath)
-			}
-		})
-	}
-}
-
-func TestParseMinIOEndpoint(t *testing.T) {
-	cfg := createTestConfig("/tmp")
-	store, err := New(cfg)
-	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
-	}
-
-	tests := []struct {
-		name         string
-		endpoint     string
-		skipSSL      bool
-		expectedHost string
-		expectedSSL  bool
-		shouldError  bool
-	}{
-		{
-			name:         "http endpoint",
-			endpoint:     "http://localhost:9000",
-			skipSSL:      false,
-			expectedHost: "localhost:9000",
-			expectedSSL:  false,
-			shouldError:  false,
-		},
-		{
-			name:         "https endpoint",
-			endpoint:     "https://minio.example.com",
-			skipSSL:      false,
-			expectedHost: "minio.example.com",
-			expectedSSL:  true,
-			shouldError:  false,
-		},
-		{
-			name:         "https endpoint with skip SSL",
-			endpoint:     "https://minio.example.com",
-			skipSSL:      true,
-			expectedHost: "minio.example.com",
-			expectedSSL:  false,
-			shouldError:  false,
-		},
-		{
-			name:         "bare host",
-			endpoint:     "localhost:9000",
-			skipSSL:      false,
-			expectedHost: "localhost:9000",
-			expectedSSL:  true,
-			shouldError:  false,
-		},
-		{
-			name:         "bare host with skip SSL",
-			endpoint:     "localhost:9000",
-			skipSSL:      true,
-			expectedHost: "localhost:9000",
-			expectedSSL:  false,
-			shouldError:  false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			host, useSSL, err := store.parseMinIOEndpoint(tt.endpoint, tt.skipSSL)
-
-			if tt.shouldError {
-				if err == nil {
-					t.Error("Expected error but got none")
-				}
-				return
-			}
-
-			if err != nil {
-				t.Errorf("Unexpected error: %v", err)
-				return
-			}
-
-			if host != tt.expectedHost {
-				t.Errorf("Expected host %s, got %s", tt.expectedHost, host)
-			}
-
-			if useSSL != tt.expectedSSL {
-				t.Errorf("Expected SSL %v, got %v", tt.expectedSSL, useSSL)
-			}
-		})
-	}
-}
-
-func TestHandleRequest(t *testing.T) {
+func TestStoreIntegration(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "store-test-")
 	if err != nil {
@@ -325,24 +201,11 @@ func TestHandleRequest(t *testing.T) {
 		t.Fatalf("Failed to create store: %v", err)
 	}
 
-	// Create a mock HTTP server to simulate upstream
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/octet-stream")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("mock file content"))
-	}))
-	defer mockServer.Close()
+	// Test complete workflow: save -> exists -> read
+	testPath := "test/integration/file.txt"
+	testData := []byte("integration test content")
 
-	// Test cache miss (first request)
-	_ = httptest.NewRequest("GET", "/test/file.txt", nil)
-	_ = httptest.NewRecorder()
-
-	// We need to mock the getSourceStream method behavior
-	// For this test, we'll test the file existence and cache logic instead
-	testPath := "test/cache/file.txt"
-	testData := []byte("cached file content")
-
-	// Manually save a file to test cache hit
+	// Save file
 	err = store.Save(testPath, testData)
 	if err != nil {
 		t.Fatalf("Failed to save test file: %v", err)

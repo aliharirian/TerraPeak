@@ -4,18 +4,21 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/aliharirian/TerraPeak/cache"
 	"github.com/aliharirian/TerraPeak/config"
 	"github.com/aliharirian/TerraPeak/logger"
 	"github.com/aliharirian/TerraPeak/metrics"
 	"github.com/aliharirian/TerraPeak/proxy"
 	"github.com/aliharirian/TerraPeak/store"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type Service struct {
-	cfg         *config.Config
-	store       *store.Store
+	cfg          *config.Config
+	store        *store.Store
 	proxyHandler *proxy.Handler
+	cacheHandler *cache.Handler
 }
 
 func New(cfg *config.Config) (*Service, error) {
@@ -33,14 +36,27 @@ func New(cfg *config.Config) (*Service, error) {
 		return nil, err
 	}
 
+	// Initialize cache handler with injected proxy HTTP client
+	cacheHandler, err := cache.NewCacheHandlerWithClient(st, &cache.Config{
+		AllowedHosts:  cfg.Cache.AllowedHosts,
+		SkipSSLVerify: cfg.Cache.SkipSSLVerify,
+	}, proxyHandler.GetClient().GetClient())
+	if err != nil {
+		logger.Errorf("Failed to initialize cache handler: %v", err)
+		return nil, err
+	}
+
 	return &Service{
 		cfg:          cfg,
 		store:        st,
 		proxyHandler: proxyHandler,
+		cacheHandler: cacheHandler,
 	}, nil
 }
 
 func (s *Service) RegisterRoutes(router chi.Router) {
+	// Route HEAD requests to GET handlers automatically (no body)
+	router.Use(middleware.GetHead)
 	// Root endpoint
 	router.Get("/", Hello)
 
@@ -54,14 +70,16 @@ func (s *Service) RegisterRoutes(router chi.Router) {
 	router.Get("/v1/providers/{namespace}/{name}/{version}/download/{os}/{arch}", s.GetProviderDownloadDetails)
 	//router.Get("/v1/modules/{name}", s.GetModule)
 
-	// Proxy and cache endpoints
-	router.Get("/*", func(w http.ResponseWriter, r *http.Request) { s.store.HandleRequest(w, r) })
-
 	// Proxy endpoints
 	router.HandleFunc("/proxy/http/*", s.proxyHandler.HandleHTTPProxy)
 	router.HandleFunc("/proxy/socks", s.HandleSOCKSProxy)
 	router.Get("/proxy/info", s.GetProxyInfo)
 
+	// Mount cache handler for allowed hosts only
+	for _, host := range s.cfg.Cache.AllowedHosts {
+		router.HandleFunc("/"+host, s.cacheHandler.Handle)
+		router.HandleFunc("/"+host+"/*", s.cacheHandler.Handle)
+	}
 }
 
 func (s *Service) WellKnown(responseWriter http.ResponseWriter, request *http.Request) {
@@ -117,3 +135,6 @@ func (s *Service) GetProxyInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+// GetCacheStatus returns the current cache configuration and status
+// (Removed cache-specific endpoints that were previously added.)

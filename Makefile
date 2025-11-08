@@ -83,7 +83,35 @@ vet: ## Run go vet
 
 lint: ## Run golangci-lint (requires golangci-lint to be installed)
 	@echo "🔍 Running linter..."
-	cd registry && golangci-lint run ./...
+	@which golangci-lint > /dev/null || ( \
+		echo "❌ golangci-lint not found. Installing..." && \
+		GOPATH_BIN=$$(go env GOPATH)/bin && \
+		mkdir -p $$GOPATH_BIN && \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$GOPATH_BIN v1.54.2 && \
+		echo "✅ golangci-lint installed to $$GOPATH_BIN" && \
+		echo "⚠️  Please add $$GOPATH_BIN to your PATH or run: export PATH=\"$$GOPATH_BIN:\$$PATH\"" \
+	)
+	@cd registry && GOPATH_BIN=$$(go env GOPATH)/bin; \
+	if [ -f "$$GOPATH_BIN/golangci-lint" ]; then \
+		$$GOPATH_BIN/golangci-lint run --config .golangci.yml ./...; \
+	elif which golangci-lint > /dev/null; then \
+		golangci-lint run --config .golangci.yml ./...; \
+	else \
+		echo "❌ golangci-lint not found and installation failed"; \
+		exit 1; \
+	fi
+
+lint-full: ## Run full golangci-lint with all linters
+	@echo "🔍 Running full linter..."
+	@cd registry && GOPATH_BIN=$$(go env GOPATH)/bin; \
+	if [ -f "$$GOPATH_BIN/golangci-lint" ]; then \
+		$$GOPATH_BIN/golangci-lint run ./...; \
+	elif which golangci-lint > /dev/null; then \
+		golangci-lint run ./...; \
+	else \
+		echo "❌ golangci-lint not found. Please run 'make dev-setup' first"; \
+		exit 1; \
+	fi
 
 # Dependency management
 deps: ## Download and tidy dependencies
@@ -173,14 +201,172 @@ release-check: test lint vet ## Run all checks for release
 ci: deps fmt vet lint test-coverage ## Run CI pipeline
 	@echo "🤖 CI pipeline complete"
 
+# Pre-commit targets
+pre-commit: ## Run all checks before commit/push
+	@echo "🚀 Running pre-commit checks..."
+	@echo "=================================="
+	@echo ""
+	@echo "1. 📦 Managing dependencies..."
+	@$(MAKE) deps
+	@echo ""
+	@echo "2. 🎨 Formatting code..."
+	@$(MAKE) fmt
+	@echo ""
+	@echo "3. 🔍 Running go vet..."
+	@$(MAKE) vet
+	@echo ""
+	@echo "4. 🧪 Running unit tests..."
+	@$(MAKE) test-unit
+	@echo ""
+	@echo "5. 🏗️ Building application..."
+	@$(MAKE) build
+	@echo ""
+	@echo "✅ All pre-commit checks passed!"
+	@echo "🚀 Ready to commit and push!"
+
+pre-commit-quick: ## Quick pre-commit checks (faster)
+	@echo "⚡ Running quick pre-commit checks..."
+	@echo "====================================="
+	@echo ""
+	@echo "1. 🎨 Formatting code..."
+	@$(MAKE) fmt
+	@echo ""
+	@echo "2. 🔍 Running go vet..."
+	@$(MAKE) vet
+	@echo ""
+	@echo "3. 🧪 Running unit tests..."
+	@$(MAKE) test-unit
+	@echo ""
+	@echo "4. 🏗️ Building application..."
+	@$(MAKE) build
+	@echo ""
+	@echo "✅ Quick pre-commit checks passed!"
+	@echo "🚀 Ready to commit and push!"
+
+pre-commit-full: ## Full pre-commit checks (comprehensive)
+	@echo "🔍 Running full pre-commit checks..."
+	@echo "===================================="
+	@echo ""
+	@echo "1. 📦 Managing dependencies..."
+	@$(MAKE) deps
+	@echo ""
+	@echo "2. 🎨 Formatting code..."
+	@$(MAKE) fmt
+	@echo ""
+	@echo "3. 🔍 Running go vet..."
+	@$(MAKE) vet
+	@echo ""
+	@echo "4. 🧪 Running unit tests..."
+	@$(MAKE) test-unit
+	@echo ""
+	@echo "5. 🧪 Running integration tests..."
+	@$(MAKE) test-integration
+	@echo ""
+	@echo "6. 📊 Running tests with coverage..."
+	@$(MAKE) test-coverage
+	@echo ""
+	@echo "7. 🏗️ Building application..."
+	@$(MAKE) build
+	@echo ""
+	@echo "8. 🧪 Testing API endpoints..."
+	@$(MAKE) test-api
+	@echo ""
+	@echo "9. 🧪 Testing API downloads..."
+	@$(MAKE) test-api-download
+	@echo ""
+	@echo "✅ Full pre-commit checks passed!"
+	@echo "🚀 Ready to commit and push!"
+
+git-push: ## Run full checks and push
+	@echo "🚀 Running pre-push checks..."
+	@$(MAKE) pre-commit-full
+	@echo ""
+	@echo "🚀 Ready to push!"
+	git push origin main
+	@echo "✅ Push complete!"
+
 # Quick targets for common workflows
 quick-test: fmt vet test-unit ## Quick test cycle (format, vet, unit tests)
 
+# API Testing targets
+test-api: ## Test API endpoints on localhost:8081
+	@echo "🧪 Testing TerraPeak API endpoints..."
+	@echo "Testing health endpoint..."
+	@curl -s -f "http://localhost:8081/healthz" && echo "✅ Health check passed" || echo "❌ Health check failed"
+	@echo ""
+	@echo "Testing AWS provider versions..."
+	@curl -s "http://localhost:8081/v1/providers/hashicorp/aws/versions" | head -c 200 && echo "... ✅ AWS versions endpoint working" || echo "❌ AWS versions failed"
+	@echo ""
+	@echo "Testing Kubernetes provider versions..."
+	@curl -s "http://localhost:8081/v1/providers/hashicorp/kubernetes/versions" | head -c 200 && echo "... ✅ Kubernetes versions endpoint working" || echo "❌ Kubernetes versions failed"
+	@echo ""
+	@echo "Testing proxy info..."
+	@curl -s "http://localhost:8081/proxy/info" | head -c 200 && echo "... ✅ Proxy info endpoint working" || echo "❌ Proxy info failed"
+	@echo ""
+	@echo "🎉 API testing complete!"
+
+test-api-verbose: ## Test API endpoints with verbose output
+	@echo "🧪 Testing TerraPeak API endpoints (verbose)..."
+	@echo "=============================================="
+	@echo ""
+	@echo "1. Health Check:"
+	@curl -v "http://localhost:8081/healthz"
+	@echo ""
+	@echo "2. AWS Provider Versions:"
+	@curl -v "http://localhost:8081/v1/providers/hashicorp/aws/versions"
+	@echo ""
+	@echo "3. Kubernetes Provider Versions:"
+	@curl -v "http://localhost:8081/v1/providers/hashicorp/kubernetes/versions"
+	@echo ""
+	@echo "4. Proxy Info:"
+	@curl -v "http://localhost:8081/proxy/info"
+	@echo ""
+	@echo "🎉 Verbose API testing complete!"
+
+test-api-download: ## Test file download endpoints
+	@echo "🧪 Testing TerraPeak download endpoints..."
+	@echo "Testing AWS provider download (this may take a moment)..."
+	@curl -s -I "http://localhost:8081/v1/providers/hashicorp/aws/5.0.0/download/linux/amd64" | head -5
+	@echo ""
+	@echo "Testing Kubernetes provider download..."
+	@curl -s -I "http://localhost:8081/v1/providers/hashicorp/kubernetes/3.0.0/download/linux/amd64" | head -5
+	@echo ""
+	@echo "🎉 Download testing complete!"
+
 dev-setup: deps ## Setup development environment
 	@echo "🔧 Setting up development environment..."
+	@echo ""
+	@echo "📦 Installing development dependencies..."
+	@echo ""
 	@echo "Installing golangci-lint..."
-	@which golangci-lint > /dev/null || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
-	@echo "✅ Development environment ready"
+	@which golangci-lint > /dev/null || ( \
+		GOPATH_BIN=$$(go env GOPATH)/bin; \
+		mkdir -p $$GOPATH_BIN; \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$GOPATH_BIN v1.54.2; \
+		echo "Add $$GOPATH_BIN to your PATH if not already there" \
+	)
+	@echo "✅ golangci-lint installed"
+	@echo ""
+	@echo "Installing entr (for watch mode)..."
+	@which entr > /dev/null || (echo "Please install entr manually:" && echo "  macOS: brew install entr" && echo "  Ubuntu/Debian: sudo apt-get install entr" && echo "  CentOS/RHEL: sudo yum install entr")
+	@echo "✅ entr check completed"
+	@echo ""
+	@echo "Installing curl (for API testing)..."
+	@which curl > /dev/null || (echo "Please install curl manually:" && echo "  macOS: brew install curl" && echo "  Ubuntu/Debian: sudo apt-get install curl" && echo "  CentOS/RHEL: sudo yum install curl")
+	@echo "✅ curl check completed"
+	@echo ""
+	@echo "Installing tree (for directory structure)..."
+	@which tree > /dev/null || (echo "Please install tree manually:" && echo "  macOS: brew install tree" && echo "  Ubuntu/Debian: sudo apt-get install tree" && echo "  CentOS/RHEL: sudo yum install tree")
+	@echo "✅ tree check completed"
+	@echo ""
+	@echo "🔧 Development environment setup complete!"
+	@echo "📋 Installed tools:"
+	@echo "  ✅ golangci-lint (Go linter)"
+	@echo "  ✅ entr (file watcher)"
+	@echo "  ✅ curl (API testing)"
+	@echo "  ✅ tree (directory structure)"
+	@echo ""
+	@echo "🚀 Ready for development!"
 
 # Watch mode (requires entr)
 watch-test: ## Watch files and run tests on change (requires 'entr')
@@ -322,8 +508,8 @@ help-docker: ## Show Docker-specific commands
 
 # Status check
 status: ## Check project status
-	@echo "📊 TerraPeak Status"
-	@echo "=================="
+	@echo "TerraPeak Status"
+	@echo "================================+"
 	@echo "Go version: $(shell go version)"
 	@echo "Node version: $(shell node --version 2>/dev/null || echo 'Node.js not installed')"
 	@echo "Yarn version: $(shell yarn --version 2>/dev/null || echo 'Yarn not installed')"

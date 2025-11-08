@@ -1,26 +1,43 @@
 server:
   addr: ":8081"
-  read_timeout: 15
-  write_timeout: 15
+  read_timeout: 60
+  write_timeout: 60
   idle_timeout: 60
-  domain: "https://tf.tesaco.sbs"
+  domain: "localhost"
 
 log:
-  level: "debug"
+  level: "info"
 
+# Terraform registry configuration
 terraform:
   registry_url: "https://registry.terraform.io"
 
+# Cache configuration for external API proxying
+cache:
+  allowed_hosts:
+    - github.com
+    - api.github.com
+    - gitlab.com
+    - gitlab.example.com
+    - registry.terraform.io
+    - releases.hashicorp.com
+    - checkpoint-api.hashicorp.com
+  # Skip SSL certificate verification (use only for development or trusted hosts)
+  skip_ssl_verify: false
+
+# Storage backend configuration
 storage:
-  minio:
+  # Use S3/MinIO for distributed storage
+  s3:
     enabled: true
     endpoint: "http://localhost:9000"
     region: "us-east-1"
-    access_key: "minio"
-    secret_key: "minio12345"
+    access_key: "minioadmin"
+    secret_key: "minioadmin"
     bucket: "proxy-cache"
     skip_ssl_verify: true
 
+  # Alternative: Use local filesystem storage
   file:
     path: "/data/registry"
 
