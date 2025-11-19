@@ -17,6 +17,11 @@ help: ## Show this help message
 	@echo "TerraPeak - Unified Build System"
 	@echo "================================"
 	@echo ""
+	@echo "🚀 Quick Start:"
+	@echo "  make all-deps           Install all dependencies (first time setup)"
+	@echo "  make dev                Start both backend and frontend"
+	@echo "  make all-build          Build both backend and frontend"
+	@echo ""
 	@echo "Registry (Go) Commands:"
 	@echo "  make build              Build the TerraPeak binary"
 	@echo "  make test               Run all tests"
@@ -24,16 +29,19 @@ help: ## Show this help message
 	@echo "  make docker-build       Build registry Docker image"
 	@echo ""
 	@echo "Web (Next.js) Commands:"
+	@echo "  make web-deps           Install frontend dependencies"
 	@echo "  make web-build          Build Next.js application"
 	@echo "  make web-dev            Start Next.js dev server"
+	@echo "  make web-type-check     Type check TypeScript code"
 	@echo "  make web-docker-build   Build web Docker image"
-	@echo "  make web-docker-run     Run web container"
 	@echo ""
 	@echo "Unified Commands:"
+	@echo "  make all-deps           Install all dependencies"
 	@echo "  make all-build          Build both registry and web"
 	@echo "  make all-test           Test both registry and web"
+	@echo "  make all-lint           Lint both registry and web"
 	@echo "  make all-docker-build   Build all Docker images"
-	@echo "  make all-docker-run     Run all services"
+	@echo "  make dev                Start both services in dev mode"
 	@echo ""
 	@echo "For detailed help on specific sections:"
 	@echo "  make help-registry      Show registry-specific commands"
@@ -377,27 +385,55 @@ watch-test: ## Watch files and run tests on change (requires 'entr')
 # =============================================================================
 
 # Web build targets
-web-build: ## Build Next.js application for production
+web-deps: ## Install frontend dependencies
+	@echo "📦 Installing frontend dependencies..."
+	cd web && pnpm install
+	@echo "✅ Frontend dependencies installed!"
+
+web-build: web-deps ## Build Next.js application for production
 	@echo "🏗️  Building Next.js application..."
-	cd web && yarn build
+	cd web && pnpm build
 	@echo "✅ Web build complete!"
 
-web-dev: ## Start Next.js development server
+web-dev: web-deps ## Start Next.js development server
 	@echo "🚀 Starting Next.js dev server..."
-	cd web && yarn dev
+	@echo "📝 API will connect to: http://localhost:8081"
+	@echo "🌐 Frontend will run on: http://localhost:3000"
+	cd web && pnpm dev
+
+web-start: ## Start Next.js production server
+	@echo "🚀 Starting Next.js production server..."
+	cd web && pnpm start
 
 web-test: ## Run Next.js tests
 	@echo "🧪 Running Next.js tests..."
-	cd web && yarn test
+	cd web && pnpm test
 
 web-lint: ## Lint Next.js code
 	@echo "🔍 Linting Next.js code..."
-	cd web && yarn lint
+	cd web && pnpm lint
+
+web-lint-fix: ## Lint and fix Next.js code
+	@echo "🔍 Linting and fixing Next.js code..."
+	cd web && pnpm lint --fix
+
+web-type-check: ## Type check Next.js code
+	@echo "🔍 Type checking Next.js code..."
+	cd web && pnpm tsc --noEmit
 
 web-clean: ## Clean Next.js build artifacts
 	@echo "🧹 Cleaning Next.js build artifacts..."
 	cd web && rm -rf .next out node_modules/.cache
 	@echo "✅ Web cleanup complete!"
+
+web-clean-full: ## Clean everything including node_modules
+	@echo "🧹 Cleaning all Next.js artifacts..."
+	cd web && rm -rf .next out node_modules node_modules/.cache
+	@echo "✅ Full web cleanup complete!"
+
+web-analyze: web-build ## Analyze Next.js bundle size
+	@echo "📊 Analyzing Next.js bundle..."
+	cd web && pnpm analyze
 
 # Web Docker commands
 web-docker-build: ## Build web Docker image
@@ -433,11 +469,17 @@ web-docker-health: ## Check web container health
 # Unified Commands
 # =============================================================================
 
+all-deps: deps web-deps ## Install all dependencies (backend + frontend)
+	@echo "✅ All dependencies installed!"
+
 all-build: build web-build ## Build both registry and web
 	@echo "✅ All builds complete!"
 
 all-test: test web-test ## Test both registry and web
 	@echo "✅ All tests complete!"
+
+all-lint: lint web-lint ## Lint both registry and web
+	@echo "✅ All linting complete!"
 
 all-clean: clean web-clean ## Clean both registry and web
 	@echo "✅ All cleanup complete!"
@@ -450,6 +492,35 @@ all-docker-run: docker-compose-up ## Run all Docker containers
 
 all-docker-stop: docker-compose-down ## Stop all Docker containers
 	@echo "✅ All services stopped!"
+
+# Development workflow
+dev: ## Start both backend and frontend in development mode
+	@echo "🚀 Starting TerraPeak in development mode..."
+	@echo ""
+	@echo "Starting backend server..."
+	@cd registry && ./terrapeak -c .cfg.default.yml > /dev/null 2>&1 &
+	@echo "⏳ Waiting for backend to start..."
+	@sleep 2
+	@echo "✅ Backend started on http://localhost:8081"
+	@echo ""
+	@echo "Starting frontend server..."
+	@echo "🌐 Frontend will be available at http://localhost:3000"
+	@echo "📝 API endpoint: http://localhost:8081/api/v1"
+	@echo ""
+	@$(MAKE) web-dev
+
+dev-backend: build ## Build and start only backend
+	@echo "🚀 Starting backend in development mode..."
+	cd registry && ./terrapeak -c .cfg.default.yml
+
+dev-frontend: web-deps ## Start only frontend (requires backend running separately)
+	@echo "🚀 Starting frontend in development mode..."
+	@echo "⚠️  Make sure backend is running on http://localhost:8080"
+	@$(MAKE) web-dev
+
+dev-full: build web-deps ## Build everything and start in development mode
+	@echo "🚀 Full development setup..."
+	@$(MAKE) dev
 
 # =============================================================================
 # Help Commands
@@ -476,11 +547,17 @@ help-registry: ## Show registry-specific commands
 help-web: ## Show web-specific commands
 	@echo "Web (Next.js) Commands:"
 	@echo "======================"
+	@echo "  make web-deps           Install frontend dependencies"
 	@echo "  make web-build          Build Next.js application"
 	@echo "  make web-dev            Start Next.js dev server"
+	@echo "  make web-start          Start Next.js production server"
 	@echo "  make web-test           Run Next.js tests"
-	@echo "  make web-lint            Lint Next.js code"
-	@echo "  make web-clean           Clean Next.js build artifacts"
+	@echo "  make web-lint           Lint Next.js code"
+	@echo "  make web-lint-fix       Lint and fix Next.js code"
+	@echo "  make web-type-check     Type check TypeScript code"
+	@echo "  make web-clean          Clean Next.js build artifacts"
+	@echo "  make web-clean-full     Clean including node_modules"
+	@echo "  make web-analyze        Analyze bundle size"
 	@echo "  make web-docker-build   Build web Docker image"
 	@echo "  make web-docker-run     Run web container"
 	@echo "  make web-docker-stop    Stop web container"
@@ -512,12 +589,16 @@ status: ## Check project status
 	@echo "================================+"
 	@echo "Go version: $(shell go version)"
 	@echo "Node version: $(shell node --version 2>/dev/null || echo 'Node.js not installed')"
-	@echo "Yarn version: $(shell yarn --version 2>/dev/null || echo 'Yarn not installed')"
+	@echo "pnpm version: $(shell pnpm --version 2>/dev/null || echo 'pnpm not installed')"
 	@echo "Docker version: $(shell docker --version 2>/dev/null || echo 'Docker not installed')"
 	@echo "Git branch: $(shell git branch --show-current 2>/dev/null || echo 'not a git repo')"
 	@echo "Git status: $(shell git status --porcelain 2>/dev/null | wc -l | xargs) files changed"
 	@echo "Registry dependencies: $(shell cd registry && go list -m all | wc -l | xargs) modules"
-	@echo "Web dependencies: $(shell cd web && yarn list --depth=0 2>/dev/null | wc -l | xargs) packages"
+	@echo "Web dependencies: $(shell cd web && pnpm list --depth=0 2>/dev/null | wc -l | xargs) packages"
 	@echo "Registry test files: $(shell find registry -name "*_test.go" | wc -l | xargs) files"
 	@echo "Registry source files: $(shell find registry -name "*.go" -not -name "*_test.go" | wc -l | xargs) files"
 	@echo "Web source files: $(shell find web -name "*.tsx" -o -name "*.ts" -o -name "*.js" -o -name "*.jsx" | wc -l | xargs) files"
+	@echo ""
+	@echo "Services:"
+	@echo "  Backend: http://localhost:8080 ($(shell curl -s http://localhost:8080/api/v1/health 2>/dev/null && echo 'running' || echo 'not running'))"
+	@echo "  Frontend: http://localhost:3000 ($(shell curl -s http://localhost:3000 2>/dev/null && echo 'running' || echo 'not running'))"
