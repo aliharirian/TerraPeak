@@ -24,3 +24,4 @@ type Storage interface {
 	// Save metadata (checksums, etc.)
 	SaveMetadata(filePath, md5Sum, sha256Sum string, size int64) error
 }
+

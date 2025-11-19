@@ -1,7 +1,29 @@
+version: '3.8'
+
+# =============================================================================
+# TerraPeak - Unified Docker Compose Configuration
+# =============================================================================
+# Complete TerraPeak stack with registry, web, and storage services
+#
+# Services:
+#   - registry: TerraPeak caching proxy server (Go)
+#   - web: Next.js web interface
+#   - minio: Object storage for caching
+#
+# Usage:
+#   - Start all: docker-compose up -d
+#   - Start specific: docker-compose up -d registry web
+#   - Stop all: docker-compose down
+#   - View logs: docker-compose logs -f [service]
+# =============================================================================
+
 services:
-  terrapeak:
-    image: aliharirian/terrapeak:latest
-    container_name: terrapeak
+  # =============================================================================
+  # Registry Service (TerraPeak Backend)
+  # =============================================================================
+  registry:
+    image: ghcr.io/aliharirian/terrapeak-registry:latest
+    container_name: terrapeak-registry
     ports:
       - "8081:8081"
     volumes:
@@ -20,13 +42,69 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # =============================================================================
+  # Web Service (Next.js Frontend)
+  # =============================================================================
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    image: ghcr.io/aliharirian/terrapeak-web:latest
+    container_name: terrapeak-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - terrapeak-network
+
+  # =============================================================================
+  # MinIO Storage Service
+  # =============================================================================
   minio:
     image: minio/minio:latest
-    container_name: minio
+    container_name: terrapeak-minio
     ports:
-      - 9000:9000
-      - 9001:9001
+      - "9000:9000"
+      - "9001:9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -41,16 +119,35 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+# =============================================================================
+# Networks
+# =============================================================================
 networks:
   terrapeak-network:
     name: terrapeak-network
     driver: bridge
 
+# =============================================================================
+# Volumes
+# =============================================================================
 volumes:
   minio-data:
-    name: minio-data
+    name: terrapeak-minio-data
     driver: local
   terrapeak-data:
-    name: terrapeak-data
+    name: terrapeak-registry-data
     driver: local

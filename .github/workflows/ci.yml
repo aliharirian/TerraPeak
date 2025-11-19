@@ -1,72 +1,119 @@
-name: Release & Publish
+name: TerraPeak CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "feat/add-web-interface" ]
+  pull_request:
+    branches: ["feat/*", "fix/*", "hotfix/*"]
   workflow_dispatch:
+    inputs:
+      force_release:
+        description: 'Force a release (bypass branch restrictions)'
+        required: false
+        default: false
+        type: boolean
+      environment:
+        description: 'Environment to deploy to'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
 
 permissions:
   contents: write
-  issues: write
   pull-requests: write
   packages: write
+  id-token: write
 
 env:
-  DOCKER_IMAGE: aliharirian/terrapeak
+  REGISTRY: ghcr.io
+  DOCKERHUB_REGISTRY: docker.io
+  REGISTRY_IMAGE_NAME: terrapeak-registry
+  WEB_IMAGE_NAME: terrapeak-web
+  GO_VERSION: "1.25"
 
 jobs:
-  test:
-    name: Test
+  test-go:
+    name: Test Go Application
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      cache-hit: ${{ steps.go-cache.outputs.cache-hit }}
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
 
-      - name: Download dependencies
+      - name: Cache Go modules
+        id: go-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+            registry/vendor
+          key: ${{ runner.os }}-go-${{ hashFiles('registry/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download Go dependencies
+        working-directory: registry
         run: |
-          cd registry
           go mod download
           go mod verify
+          go mod tidy
 
-      - name: Run tests
+      - name: Run Go vet
+        working-directory: registry
+        run: go vet ./...
+
+      - name: Run Go tests with coverage
+        working-directory: registry
         run: |
-          cd registry
-          go test -v -race ./...
+          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+          go tool cover -html=coverage.out -o=coverage.html
 
-  semver:
-    name: Determine Version (semantic-release)
+  versioning:
+    name: Semantic Versioning
     runs-on: ubuntu-latest
-    needs: [test]
+    timeout-minutes: 10
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/add-web-interface' || github.event.inputs.force_release == 'true'
     outputs:
-      tag: ${{ steps.after.outputs.tag }}
-      version: ${{ steps.after.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
       no_new_release: ${{ steps.decide.outputs.no_new_release }}
+      released: ${{ steps.decide.outputs.released }}
+      changelog: ${{ steps.decide.outputs.changelog }}
+      release_type: ${{ steps.decide.outputs.release_type }}
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # semantic-release needs full history
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
       - name: Install semantic-release
         run: |
-          npm -g i \
-            semantic-release \
+          npm install -g semantic-release \
             @semantic-release/changelog \
             @semantic-release/git \
             @semantic-release/github \
-            conventional-changelog-conventionalcommits \
-            @semantic-release/commit-analyzer \
-            @semantic-release/release-notes-generator
+            @semantic-release/exec \
+            conventional-changelog-conventionalcommits
 
       - name: Previous tag (before)
         id: before
@@ -76,15 +123,13 @@ jobs:
           echo "prev=${PREV}" >> $GITHUB_OUTPUT
           echo "Previous tag: ${PREV}"
 
-      - name: Run semantic-release
-        id: semrel
+      - name: Create semantic release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npx semantic-release --no-ci
+        run: npx semantic-release
 
       - name: Latest tag (after)
-        id: after
+        id: release
         run: |
           git fetch --tags --force
           TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
@@ -95,21 +140,110 @@ jobs:
       - name: Decide if a new release was created
         id: decide
         run: |
-          if [ "${{ steps.before.outputs.prev }}" = "${{ steps.after.outputs.tag }}" ] || [ -z "${{ steps.after.outputs.tag }}" ]; then
+          if [ "${{ steps.before.outputs.prev }}" = "${{ steps.release.outputs.tag }}" ] || [ -z "${{ steps.release.outputs.tag }}" ]; then
             echo "no_new_release=true" >> $GITHUB_OUTPUT
+            echo "released=false" >> $GITHUB_OUTPUT
+            echo "changelog=" >> $GITHUB_OUTPUT
+            echo "release_type=" >> $GITHUB_OUTPUT
             echo "No new release created."
           else
             echo "no_new_release=false" >> $GITHUB_OUTPUT
-            echo "New release: ${{ steps.after.outputs.tag }}"
+            echo "released=true" >> $GITHUB_OUTPUT
+            echo "changelog=Release ${{ steps.release.outputs.tag }}" >> $GITHUB_OUTPUT
+            echo "release_type=release" >> $GITHUB_OUTPUT
+            echo "New release: ${{ steps.release.outputs.tag }}"
           fi
 
-  docker:
-    name: Build & Push Docker (latest + version tags)
-    needs: semver
-    if: ${{ needs.semver.outputs.no_new_release == 'false' && needs.semver.outputs.tag != '' }}
+  build-registry-binary:
+    name: Build Registry Binary
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [versioning]
+    if: needs.versioning.outputs.no_new_release == 'false' || github.event.inputs.force_release == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            platform: linux/amd64
+          - goos: linux
+            goarch: arm64
+            platform: linux/arm64
+          - goos: darwin
+            goarch: amd64
+            platform: darwin/amd64
+          - goos: darwin
+            goarch: arm64
+            platform: darwin/arm64
     steps:
-      - name: Checkout
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Restore Go cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('registry/go.sum') }}
+
+      - name: Build binary
+        env:
+          CGO_ENABLED: 0
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          VERSION: ${{ needs.versioning.outputs.version }}
+        working-directory: registry
+        run: |
+          mkdir -p ../dist
+          BINARY_NAME=terrapeak-registry_${GOOS}_${GOARCH}
+          
+          echo "Building ${BINARY_NAME} for ${GOOS}/${GOARCH}"
+          go build \
+            -trimpath \
+            -ldflags "-s -w -X main.version=${VERSION:-dev} -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ) -X main.gitCommit=${GITHUB_SHA}" \
+            -o "../dist/${BINARY_NAME}" \
+            .
+
+      - name: Test binary (Linux/macOS only)
+        working-directory: dist
+        run: |
+          BINARY_NAME=terrapeak-registry_${{ matrix.goos }}_${{ matrix.goarch }}
+          chmod +x "${BINARY_NAME}"
+          ./"${BINARY_NAME}" --version || echo "Version test completed"
+
+      - name: Upload binary artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: terrapeak-registry-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/terrapeak-registry_${{ matrix.goos }}_${{ matrix.goarch }}*
+
+  build-docker-images:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [versioning]
+    if: needs.versioning.outputs.no_new_release == 'false' || github.event.inputs.force_release == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: registry
+            context: ./registry
+            dockerfile: ./registry/Dockerfile
+            image: terrapeak-registry
+          - name: web
+            context: ./web
+            dockerfile: ./web/Dockerfile
+            image: terrapeak-web
+    steps:
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up QEMU
@@ -117,6 +251,28 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ github.repository_owner }}/${{ matrix.image }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}},value=${{ needs.versioning.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.versioning.outputs.version }}
+            type=semver,pattern={{major}},value=${{ needs.versioning.outputs.version }}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix={{branch}}-
+          labels: |
+            org.opencontainers.image.title=TerraPeak ${{ matrix.name }}
+            org.opencontainers.image.description=TerraPeak ${{ matrix.name }} component
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
+            org.opencontainers.image.version=${{ needs.versioning.outputs.version }}
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -124,64 +280,97 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build & Push (linux/amd64, linux/arm64)
-        uses: docker/build-push-action@v6
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
         with:
-          context: registry
-          file: registry/Dockerfile
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
           platforms: linux/amd64,linux/arm64
           push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           build-args: |
-            VERSION=${{ needs.semver.outputs.version }}
-          tags: |
-            ${{ env.DOCKER_IMAGE }}:latest
-            ${{ env.DOCKER_IMAGE }}:${{ needs.semver.outputs.version }}
-            ${{ env.DOCKER_IMAGE }}:${{ needs.semver.outputs.tag }}
+            VERSION=${{ needs.versioning.outputs.version }}
+            BUILD_TIME=${{ github.event.head_commit.timestamp }}
+            GIT_COMMIT=${{ github.sha }}
 
-  binaries:
-    name: Build & Upload Binaries (Linux/macOS)
-    needs: semver
-    if: ${{ needs.semver.outputs.no_new_release == 'false' && needs.semver.outputs.tag != '' }}
+      - name: Scan Docker images for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ github.repository_owner }}/${{ matrix.image }}:latest
+          format: 'table'
+        continue-on-error: true
+
+  release-artifacts:
+    name: Release Artifacts
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - goos: linux
-            goarch: amd64
-          - goos: linux
-            goarch: arm64
-          - goos: darwin
-            goarch: amd64
-          - goos: darwin
-            goarch: arm64
+    timeout-minutes: 10
+    needs: [versioning, build-registry-binary, build-docker-images]
+    if: needs.versioning.outputs.released == 'true'
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Download all binary artifacts
+        uses: actions/download-artifact@v4
         with:
-          go-version: "1.25"
+          path: ./release-binaries
+          pattern: terrapeak-registry-*
+          merge-multiple: true
 
-      - name: Build
-        env:
-          CGO_ENABLED: 0
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          VERSION: ${{ needs.semver.outputs.version }}
+      - name: Create release archive
         run: |
-          mkdir -p dist
-          BIN_NAME=terrapeak_${GOOS}_${GOARCH}
-          if [ "${GOOS}" = "windows" ]; then BIN_NAME="${BIN_NAME}.exe"; fi
-          cd registry
-          go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o "../dist/${BIN_NAME}" .
+          mkdir -p release
+          cd release-binaries
+          for file in *; do
+            if [[ -f "$file" ]]; then
+              tar -czf "../release/${file}.tar.gz" "$file"
+              echo "Created archive for $file"
+            fi
+          done
 
-      - name: Upload binaries to Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.semver.outputs.tag }}
+          tag_name: v${{ needs.versioning.outputs.version }}
+          name: TerraPeak v${{ needs.versioning.outputs.version }}
+          body: ${{ needs.versioning.outputs.changelog }}
+          draft: false
+          prerelease: ${{ contains(needs.versioning.outputs.version, '-') }}
           files: |
-            dist/*
+            release/*.tar.gz
+            CHANGELOG.md
+            LICENSE
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    name: Deployment Notification
+    runs-on: ubuntu-latest
+    needs: [versioning, build-docker-images, release-artifacts]
+    if: always() && (needs.versioning.outputs.released == 'true')
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "## TerraPeak Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Release Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: v${{ needs.versioning.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Type**: ${{ needs.versioning.outputs.release_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Docker Images Published" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry**: \`${{ github.repository_owner }}/terrapeak-registry:v${{ needs.versioning.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web**: \`${{ github.repository_owner }}/terrapeak-web:v${{ needs.versioning.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull Commands" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ github.repository_owner }}/terrapeak-registry:v${{ needs.versioning.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ github.repository_owner }}/terrapeak-web:v${{ needs.versioning.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Binary Releases" >> $GITHUB_STEP_SUMMARY
+          echo "Cross-platform binaries available in GitHub Releases" >> $GITHUB_STEP_SUMMARY

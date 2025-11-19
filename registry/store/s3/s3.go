@@ -184,6 +184,11 @@ func (s *Storage) SaveMetadata(filePath, md5Sum, sha256Sum string, size int64) e
 	return nil
 }
 
+// GetClient returns the underlying MinIO client for advanced operations
+func (s *Storage) GetClient() *minio.Client {
+	return s.client
+}
+
 // parseEndpoint parses S3 endpoint URL and returns host:port and SSL flag
 func parseEndpoint(endpointURL string, skipSSL bool) (string, bool, error) {
 	parsedURL, err := url.Parse(endpointURL)

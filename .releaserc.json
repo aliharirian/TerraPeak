@@ -1,8 +1,53 @@
 {
-  "branches": ["main"],
+  "branches": [
+    "main",
+    {
+      "name": "feat/*",
+      "prerelease": "test"
+    }
+  ],
+  "repositoryUrl": "https://github.com/aliharirian/TerraPeak",
   "plugins": [
-    "@semantic-release/commit-analyzer",
-    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits",
+        "releaseRules": [
+          {"type": "feat", "release": "minor"},
+          {"type": "fix", "release": "patch"},
+          {"type": "perf", "release": "patch"},
+          {"type": "revert", "release": "patch"},
+          {"type": "docs", "release": "patch"},
+          {"type": "style", "release": false},
+          {"type": "chore", "release": false},
+          {"type": "refactor", "release": "patch"},
+          {"type": "test", "release": false},
+          {"type": "build", "release": "patch"},
+          {"type": "ci", "release": false},
+          {"breaking": true, "release": "major"}
+        ]
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "conventionalcommits",
+        "presetConfig": {
+          "types": [
+            {"type": "feat", "section": "🚀 Features"},
+            {"type": "fix", "section": "🐛 Bug Fixes"},
+            {"type": "perf", "section": "⚡ Performance Improvements"},
+            {"type": "revert", "section": "⏪ Reverts"},
+            {"type": "docs", "section": "📚 Documentation"},
+            {"type": "style", "section": "💎 Styles"},
+            {"type": "refactor", "section": "♻️ Code Refactoring"},
+            {"type": "test", "section": "🧪 Tests"},
+            {"type": "build", "section": "🔧 Build System"},
+            {"type": "ci", "section": "👷 CI/CD"}
+          ]
+        }
+      }
+    ],
     [
       "@semantic-release/changelog",
       {
@@ -14,29 +59,28 @@
       {
         "assets": [
           {
-            "path": "dist/terrapeak-linux-amd64",
-            "name": "terrapeak-linux-amd64",
-            "label": "Linux AMD64 Binary"
+            "path": "release/*.tar.gz",
+            "label": "Binary releases archive"
           },
           {
-            "path": "dist/terrapeak-linux-arm64",
-            "name": "terrapeak-linux-arm64",
-            "label": "Linux ARM64 Binary"
+            "path": "dist/terrapeak-registry_linux_amd64",
+            "name": "terrapeak-registry-linux-amd64",
+            "label": "Registry Linux AMD64 Binary"
           },
           {
-            "path": "dist/terrapeak-darwin-amd64",
-            "name": "terrapeak-darwin-amd64",
-            "label": "macOS Intel Binary"
+            "path": "dist/terrapeak-registry_linux_arm64",
+            "name": "terrapeak-registry-linux-arm64",
+            "label": "Registry Linux ARM64 Binary"
           },
           {
-            "path": "dist/terrapeak-darwin-arm64",
-            "name": "terrapeak-darwin-arm64",
-            "label": "macOS Apple Silicon Binary"
+            "path": "dist/terrapeak-registry_darwin_amd64",
+            "name": "terrapeak-registry-darwin-amd64",
+            "label": "Registry macOS Intel Binary"
           },
           {
-            "path": "dist/checksums.txt",
-            "name": "checksums.txt",
-            "label": "SHA256 Checksums"
+            "path": "dist/terrapeak-registry_darwin_arm64",
+            "name": "terrapeak-registry-darwin-arm64",
+            "label": "Registry macOS Apple Silicon Binary"
           }
         ]
       }

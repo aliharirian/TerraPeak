@@ -1,3 +1,20 @@
+## [1.3.0-test.5](https://github.com/aliharirian/TerraPeak/compare/v1.3.0-test.4...v1.3.0-test.5) (2025-11-19)
+
+### 🚀 Features
+
+* **makefile:** enhance development workflow with new commands and improve dependency management ([197bb1a](https://github.com/aliharirian/TerraPeak/commit/197bb1a532d7a17180c030279045b028b6248671))
+
+## [1.3.0-test.4](https://github.com/aliharirian/TerraPeak/compare/v1.3.0-test.3...v1.3.0-test.4) (2025-11-08)
+
+### 🚀 Features
+
+* **registry:** implement unified storage API with S3 and filesystem support, add middleware for CORS and logging ([73ed22c](https://github.com/aliharirian/TerraPeak/commit/73ed22c8a2f818dd17be79c55c9956a16aa7f3dd))
+
+### 🐛 Bug Fixes
+
+* **registry:** consolidate cache proxy ([#2](https://github.com/aliharirian/TerraPeak/issues/2)) ([211b908](https://github.com/aliharirian/TerraPeak/commit/211b908fcae2c477ea38f0fd5bf47216f513e1ad))
+* **registry:** implement interface store ([e6cfc00](https://github.com/aliharirian/TerraPeak/commit/e6cfc0079ef1c2512852e118574a5549a810f6a0))
+
 ## [1.2.2](https://github.com/aliharirian/TerraPeak/compare/v1.2.1...v1.2.2) (2025-10-22)
 
 

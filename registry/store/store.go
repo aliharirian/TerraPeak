@@ -12,6 +12,11 @@ type Store struct {
 	backend Storage
 }
 
+// Backend returns the underlying storage backend
+func (s *Store) Backend() Storage {
+	return s.backend
+}
+
 // New creates a new Store instance
 // Automatically selects backend based on config:
 // - If S3.Enabled = true, uses S3/MinIO
@@ -49,4 +54,17 @@ func (s *Store) ReadFromStorage(filePath string) ([]byte, error) {
 // Save saves data to storage
 func (s *Store) Save(filename string, data []byte) error {
 	return s.backend.Write(filename, data)
+}
+
+// GetStorageType returns the type of storage backend being used
+func (s *Store) GetStorageType() string {
+	if s.config.Storage.S3.Enabled {
+		return "s3"
+	}
+	return "filesystem"
+}
+
+// GetConfig returns the store configuration
+func (s *Store) GetConfig() *config.Config {
+	return s.config
 }
