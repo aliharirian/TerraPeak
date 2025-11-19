@@ -1,3 +1,9 @@
+## [1.3.0-test.5](https://github.com/aliharirian/TerraPeak/compare/v1.3.0-test.4...v1.3.0-test.5) (2025-11-19)
+
+### 🚀 Features
+
+* **makefile:** enhance development workflow with new commands and improve dependency management ([197bb1a](https://github.com/aliharirian/TerraPeak/commit/197bb1a532d7a17180c030279045b028b6248671))
+
 ## [1.3.0-test.4](https://github.com/aliharirian/TerraPeak/compare/v1.3.0-test.3...v1.3.0-test.4) (2025-11-08)
 
 ### 🚀 Features
