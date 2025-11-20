@@ -62,7 +62,8 @@ func (s *Service) RegisterRoutes(router chi.Router) {
 
 	// Health & Metrics endpoint
 	router.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { metrics.Health(w) })
-	router.Get("/metrics", func(w http.ResponseWriter, r *http.Request) { metrics.Metrics() })
+	// Expose Prometheus metrics handler
+	router.Get("/metrics", metrics.Metrics)
 
 	// Terraform registry endpoints
 	router.Get("/.well-known/terraform.json", s.WellKnown)

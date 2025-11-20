@@ -5,7 +5,7 @@ services:
     ports:
       - "8081:8081"
     volumes:
-      - ./cfg.yml:/app/cfg.yml:ro
+      - ./cfg.default.yml:/app/cfg.yml:ro
       - terrapeak-data:/data
     environment:
       - LOG_LEVEL=info

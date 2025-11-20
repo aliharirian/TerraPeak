@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aliharirian/TerraPeak/logger"
+	"github.com/aliharirian/TerraPeak/metrics"
 )
 
 // StoreInterface defines the interface for the store that the cache handler will use
@@ -100,9 +101,12 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 
 // serveCachedContent serves content from the cache
 func (h *Handler) serveCachedContent(w http.ResponseWriter, cacheKey string) {
+	// Increment cache hit metric
+	metrics.IncCacheHit()
 	data, err := h.store.ReadFromStorage(cacheKey)
 	if err != nil {
 		logger.Errorf("Failed to read cached content for %s: %v", cacheKey, err)
+		metrics.IncStorageError()
 		http.Error(w, "Internal server error reading cache", http.StatusInternalServerError)
 		return
 	}
@@ -123,6 +127,8 @@ func (h *Handler) serveCachedContent(w http.ResponseWriter, cacheKey string) {
 
 // proxyAndCache proxies the request to upstream server and caches the successful response
 func (h *Handler) proxyAndCache(w http.ResponseWriter, proxyReq *ProxyRequest, cacheKey string) {
+	// Increment cache miss metric
+	metrics.IncCacheMiss()
 	// Make upstream request with SSL verification config
 	resp, err := MakeUpstreamRequestWithConfig(proxyReq, h.httpClient, h.config.SkipSSLVerify)
 	if err != nil {
@@ -130,6 +136,9 @@ func (h *Handler) proxyAndCache(w http.ResponseWriter, proxyReq *ProxyRequest, c
 		http.Error(w, "Upstream server error", http.StatusBadGateway)
 		return
 	}
+
+	// Record upstream request status
+	metrics.IncUpstreamRequest(resp.StatusCode)
 
 	// Copy response headers to client (excluding hop-by-hop headers)
 	copyResponseHeaders(w.Header(), resp.Headers)

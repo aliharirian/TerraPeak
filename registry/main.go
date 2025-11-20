@@ -14,6 +14,7 @@ import (
 
 	"github.com/aliharirian/TerraPeak/api"
 	"github.com/aliharirian/TerraPeak/config"
+	"github.com/aliharirian/TerraPeak/metrics"
 )
 
 func main() {
@@ -36,6 +37,8 @@ func main() {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.RequestLogger(&logger.ZerologAdapter{}))
+	// Instrument HTTP handlers with Prometheus middleware
+	router.Use(metrics.HTTPMiddleware)
 
 	svc, err := api.New(cfg)
 	if err != nil {
