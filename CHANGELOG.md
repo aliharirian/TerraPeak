@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/aliharirian/TerraPeak/compare/v1.2.2...v1.3.0) (2025-11-21)
+
+
+### Features
+
+* **registry:** implement comprehensive Prometheus metrics instrumentation ([#5](https://github.com/aliharirian/TerraPeak/issues/5)) ([c8b5a3b](https://github.com/aliharirian/TerraPeak/commit/c8b5a3bb151e2c77342da0d194552e778e86fe9a))
+
 ## [1.2.2](https://github.com/aliharirian/TerraPeak/compare/v1.2.1...v1.2.2) (2025-10-22)
 
 
