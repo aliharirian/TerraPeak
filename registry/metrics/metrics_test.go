@@ -28,16 +28,26 @@ func TestHealth(t *testing.T) {
 }
 
 func TestMetrics(t *testing.T) {
-	// Since Metrics() doesn't take parameters, we test that it doesn't panic
+	// Call the HTTP handler and ensure it responds with 200 and non-empty body
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/metrics", nil)
+
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("Metrics() panicked: %v", r)
 		}
 	}()
 
-	Metrics()
+	Metrics(w, req)
 
-	// Test passed if we reach here without panic
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200 from metrics handler, got %d", resp.StatusCode)
+	}
+
+	if w.Body.Len() == 0 {
+		t.Error("Expected non-empty metrics body")
+	}
 }
 
 // Helper function to check if string contains substring
