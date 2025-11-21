@@ -57,17 +57,13 @@ var (
 )
 
 // Metrics serves Prometheus metrics on the provided ResponseWriter.
+// It also emits a minimal log line (kept intentionally small to avoid
+// high-cardinality logging from frequent scrapes).
 func Metrics(w http.ResponseWriter, r *http.Request) {
-	promhttp.Handler().ServeHTTP(w, r)
-}
-
-// MetricsLogAndServe logs the incoming request then serves Prometheus metrics.
-// Use this when you want the metrics package to also perform logging similar to
-// how `Health` is used for health checks.
-func MetricsLogAndServe(w http.ResponseWriter, r *http.Request) {
-	// Log remote address and basic request info
+	// Log remote address and basic request info (centralized here to avoid
+	// duplication). Keep logging minimal to avoid high-cardinality logs.
 	logger.Infof("HTTP GET /metrics - from %s", r.RemoteAddr)
-	Metrics(w, r)
+	promhttp.Handler().ServeHTTP(w, r)
 }
 
 // Health is kept in a separate file (health.go) and remains unchanged.
