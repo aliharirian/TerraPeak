@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aliharirian/TerraPeak/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -58,6 +59,15 @@ var (
 // Metrics serves Prometheus metrics on the provided ResponseWriter.
 func Metrics(w http.ResponseWriter, r *http.Request) {
 	promhttp.Handler().ServeHTTP(w, r)
+}
+
+// MetricsLogAndServe logs the incoming request then serves Prometheus metrics.
+// Use this when you want the metrics package to also perform logging similar to
+// how `Health` is used for health checks.
+func MetricsLogAndServe(w http.ResponseWriter, r *http.Request) {
+	// Log remote address and basic request info
+	logger.Infof("HTTP GET /metrics - from %s", r.RemoteAddr)
+	Metrics(w, r)
 }
 
 // Health is kept in a separate file (health.go) and remains unchanged.
