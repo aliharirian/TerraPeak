@@ -22,9 +22,9 @@ type Config struct {
 		Level string `yaml:"level"`
 	} `yaml:"log"`
 
-	Terraform struct {
-		RegistryUrl string `yaml:"registry_url"`
-	} `yaml:"terraform"`
+	Registry struct {
+		Url string `yaml:"url"`
+	} `yaml:"registry"`
 
 	Storage struct {
 		S3 struct {
@@ -65,9 +65,9 @@ type Config struct {
 
 // Validate checks if the configuration is valid
 func (c *Config) Validate(logger zerolog.Logger) error {
-	if c.Terraform.RegistryUrl == "" {
-		logger.Error().Msg("terraform.registry_url is required but not set")
-		return errors.New("terraform.registry_url is required")
+	if c.Registry.Url == "" {
+		logger.Error().Msg("registry.url is required but not set")
+		return errors.New("registry.url is required")
 	}
 
 	if c.Server.Addr == "" {
@@ -81,7 +81,7 @@ func (c *Config) Validate(logger zerolog.Logger) error {
 	}
 
 	logger.Debug().
-		Str("registry_url", c.Terraform.RegistryUrl).
+		Str("registry_url", c.Registry.Url).
 		Str("server_addr", c.Server.Addr).
 		Int("allowed_hosts", len(c.Cache.AllowedHosts)).
 		Msg("Configuration validated successfully")

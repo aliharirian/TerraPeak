@@ -9,8 +9,8 @@ log:
   level: "info"
 
 # Terraform registry configuration
-terraform:
-  registry_url: "https://registry.terraform.io"
+registry:
+  url: "https://registry.terraform.io"
 
 # Cache configuration for external API proxying
 cache:
@@ -29,8 +29,9 @@ cache:
 storage:
   # Use S3/MinIO for distributed storage
   s3:
-    enabled: true
-    endpoint: "http://localhost:9000"
+    # If you want to use S3/MinIO, set this to true and if you want to set false to use local filesystem storage
+    enabled: false
+    endpoint: "http://minio:9000"
     region: "us-east-1"
     access_key: "minioadmin"
     secret_key: "minioadmin"

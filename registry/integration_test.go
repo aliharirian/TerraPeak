@@ -36,10 +36,10 @@ func createIntegrationTestConfig(tempDir string) *config.Config {
 		}{
 			Level: "info",
 		},
-		Terraform: struct {
-			RegistryUrl string `yaml:"registry_url"`
+		Registry: struct {
+			Url string `yaml:"url"`
 		}{
-			RegistryUrl: "https://registry.terraform.io",
+			Url: "https://registry.terraform.io",
 		},
 		Storage: struct {
 			S3 struct {
@@ -203,7 +203,7 @@ func TestCachingBehavior(t *testing.T) {
 
 	// Create test configuration
 	cfg := createIntegrationTestConfig(tempDir)
-	cfg.Terraform.RegistryUrl = mockUpstream.URL
+	cfg.Registry.Url = mockUpstream.URL
 
 	// Create API service
 	svc, err := api.New(cfg)
@@ -273,7 +273,7 @@ func TestErrorHandling(t *testing.T) {
 
 	// Create test configuration with invalid upstream
 	cfg := createIntegrationTestConfig(tempDir)
-	cfg.Terraform.RegistryUrl = "http://nonexistent-upstream.example.com"
+	cfg.Registry.Url = "http://nonexistent-upstream.example.com"
 
 	// Create API service
 	svc, err := api.New(cfg)
@@ -323,7 +323,7 @@ func TestConcurrentRequests(t *testing.T) {
 
 	// Create test configuration
 	cfg := createIntegrationTestConfig(tempDir)
-	cfg.Terraform.RegistryUrl = mockUpstream.URL
+	cfg.Registry.Url = mockUpstream.URL
 
 	// Create API service
 	svc, err := api.New(cfg)
