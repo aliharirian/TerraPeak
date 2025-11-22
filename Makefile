@@ -1,66 +1,96 @@
-# TerraPeak Makefile
-# Build and test automation for TerraPeak Terraform Registry
+# =============================================================================
+# TerraPeak - Unified Makefile
+# =============================================================================
+# Complete build and deployment automation for TerraPeak project
+# - Registry (Go) operations
+# - Docker containerization and deployment
+# - Development and production workflows
+# =============================================================================
 
-.PHONY: help build test test-unit test-integration test-coverage clean fmt lint vet deps run docker-build docker-run
+.PHONY: help build test test-unit test-integration test-coverage test-api-provider clean fmt lint vet deps run docker-build docker-run
+.PHONY: docker-up docker-up-minio docker-down docker-logs docker-restart docker-ps
+.PHONY: dev-setup status quick-test watch-test help-registry help-docker
 
 # Default target
 help: ## Show this help message
-	@echo "TerraPeak - Terraform Peak of Features"
-	@echo "===================================="
+	@echo "TerraPeak - Unified Build System"
+	@echo "================================"
 	@echo ""
-	@echo "Available targets:"
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo "Quick Start:"
+	@echo "  make deps               Install all dependencies (first time setup)"
+	@echo "  make build              Build the TerraPeak binary"
+	@echo "  make test               Run all tests"
+	@echo ""
+	@echo "Registry (Go) Commands:"
+	@echo "  make build              Build the TerraPeak binary"
+	@echo "  make test               Run all tests"
+	@echo "  make run                Run TerraPeak server"
+	@echo "  make docker-build       Build registry Docker image"
+	@echo ""
+	@echo "API Testing Commands:"
+	@echo "  make test-api           Test core API endpoints"
+	@echo "  make test-api-provider  Test Terraform provider discovery & download"
+	@echo ""
+	@echo "Docker Commands:"
+	@echo "  make docker-build       Build Docker image"
+	@echo "  make docker-up          Start registry (filesystem storage)"
+	@echo "  make docker-up-minio    Start registry with MinIO (S3 storage)"
+	@echo "  make docker-down        Stop all services"
+	@echo ""
+	@echo "For detailed help:"
+	@echo "  make help-registry      Show all registry commands"
+	@echo "  make help-docker        Show all Docker commands"
 
 # Build targets
 build: ## Build the TerraPeak binary
-	@echo "🔨 Building TerraPeak..."
+	@echo "Building TerraPeak..."
 	cd registry && go build -ldflags="-s -w" -o terrapeak .
-	@echo "✅ Build complete: registry/terrapeak"
+	@echo "Build complete: registry/terrapeak"
 
 build-linux: ## Build for Linux (useful for Docker)
-	@echo "🔨 Building TerraPeak for Linux..."
+	@echo "Building TerraPeak for Linux..."
 	cd registry && GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o terrapeak-linux .
-	@echo "✅ Linux build complete: registry/terrapeak-linux"
+	@echo "Linux build complete: registry/terrapeak-linux"
 
 # Test targets
 test: test-unit test-integration ## Run all tests
 
 test-unit: ## Run unit tests only
-	@echo "🧪 Running unit tests..."
+	@echo "Running unit tests..."
 	cd registry && go test -v -race ./...
 
 test-integration: ## Run integration tests
-	@echo "🧪 Running integration tests..."
+	@echo "Running integration tests..."
 	cd registry && go test -v -tags=integration ./...
 
 test-coverage: ## Run tests with coverage report
-	@echo "🧪 Running tests with coverage..."
+	@echo "Running tests with coverage..."
 	cd registry && go test -v -race -coverprofile=coverage.out ./...
 	cd registry && go tool cover -html=coverage.out -o coverage.html
-	@echo "📊 Coverage report generated: registry/coverage.html"
+	@echo "Coverage report generated: registry/coverage.html"
 
 test-benchmark: ## Run benchmark tests
-	@echo "🏃 Running benchmark tests..."
+	@echo "Running benchmark tests..."
 	cd registry && go test -bench=. -benchmem ./...
 
 # Code quality targets
 fmt: ## Format Go code
-	@echo "🎨 Formatting code..."
+	@echo "Formatting code..."
 	cd registry && go fmt ./...
 
 vet: ## Run go vet
-	@echo "🔍 Running go vet..."
+	@echo "Running go vet..."
 	cd registry && go vet ./...
 
 lint: ## Run golangci-lint (requires golangci-lint to be installed)
-	@echo "🔍 Running linter..."
+	@echo "Running linter..."
 	@which golangci-lint > /dev/null || ( \
-		echo "❌ golangci-lint not found. Installing..." && \
+		echo "golangci-lint not found. Installing..." && \
 		GOPATH_BIN=$$(go env GOPATH)/bin && \
 		mkdir -p $$GOPATH_BIN && \
 		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$GOPATH_BIN v1.54.2 && \
-		echo "✅ golangci-lint installed to $$GOPATH_BIN" && \
-		echo "⚠️  Please add $$GOPATH_BIN to your PATH or run: export PATH=\"$$GOPATH_BIN:\$$PATH\"" \
+		echo "golangci-lint installed to $$GOPATH_BIN" && \
+		echo "Please add $$GOPATH_BIN to your PATH or run: export PATH=\"$$GOPATH_BIN:\$$PATH\"" \
 	)
 	@cd registry && GOPATH_BIN=$$(go env GOPATH)/bin; \
 	if [ -f "$$GOPATH_BIN/golangci-lint" ]; then \
@@ -68,66 +98,138 @@ lint: ## Run golangci-lint (requires golangci-lint to be installed)
 	elif which golangci-lint > /dev/null; then \
 		golangci-lint run --config .golangci.yml ./...; \
 	else \
-		echo "❌ golangci-lint not found and installation failed"; \
+		echo "golangci-lint not found and installation failed"; \
 		exit 1; \
 	fi
 
 lint-full: ## Run full golangci-lint with all linters
-	@echo "🔍 Running full linter..."
+	@echo "Running full linter..."
 	@cd registry && GOPATH_BIN=$$(go env GOPATH)/bin; \
 	if [ -f "$$GOPATH_BIN/golangci-lint" ]; then \
 		$$GOPATH_BIN/golangci-lint run ./...; \
 	elif which golangci-lint > /dev/null; then \
 		golangci-lint run ./...; \
 	else \
-		echo "❌ golangci-lint not found. Please run 'make dev-setup' first"; \
+		echo "golangci-lint not found. Please run 'make dev-setup' first"; \
 		exit 1; \
 	fi
 
 # Dependency management
 deps: ## Download and tidy dependencies
-	@echo "📦 Managing dependencies..."
+	@echo "Managing dependencies..."
 	cd registry && go mod download
 	cd registry && go mod tidy
 
 deps-update: ## Update all dependencies
-	@echo "📦 Updating dependencies..."
+	@echo "Updating dependencies..."
 	cd registry && go get -u ./...
 	cd registry && go mod tidy
 
 # Development targets
 run: ## Run TerraPeak with default config
-	@echo "🚀 Starting TerraPeak..."
+	@echo "Starting TerraPeak..."
 	cd registry && ./terrapeak -c .cfg.default.yml
 
 run-dev: build ## Build and run TerraPeak
-	@echo "🚀 Building and starting TerraPeak..."
+	@echo "Building and starting TerraPeak..."
 	cd registry && ./terrapeak -c .cfg.default.yml
+
+# Docker Compose detection
+DOCKER_COMPOSE := $(shell which docker-compose 2>/dev/null)
+DOCKER := $(shell which docker 2>/dev/null)
+
+# Determine which docker compose command to use
+ifeq ($(DOCKER_COMPOSE),)
+    ifeq ($(DOCKER),)
+        COMPOSE_CMD = $(error Docker is not installed. Please install Docker first.)
+    else
+        # Check if 'docker compose' (plugin) is available
+        COMPOSE_CHECK := $(shell docker compose version 2>/dev/null)
+        ifneq ($(COMPOSE_CHECK),)
+            COMPOSE_CMD = docker compose
+        else
+            COMPOSE_CMD = $(error Neither 'docker compose' nor 'docker-compose' is available. Please install Docker Compose.)
+        endif
+    endif
+else
+    COMPOSE_CMD = docker-compose
+endif
 
 # Docker targets
 docker-build: ## Build Docker image
-	@echo "🐳 Building Docker image..."
-	cd registry && docker build -t terrapeak:latest .
+	@echo "Building Docker image..."
+	docker build -t ghcr.io/aliharirian/terrapeak-registry:latest registry/
 
 docker-run: ## Run TerraPeak in Docker container
-	@echo "🐳 Running TerraPeak in Docker..."
-	docker run -p 8081:8081 -v $(PWD)/cfg.yml:/app/cfg.yml:ro terrapeak:latest
+	@echo "Running TerraPeak in Docker..."
+	docker run -p 8081:8081 -v $(PWD)/cfg.yml:/app/cfg.yml:ro ghcr.io/aliharirian/terrapeak-registry:latest
 
-docker-compose-up: ## Start with docker-compose
-	@echo "🐳 Starting with docker-compose..."
-	docker-compose up -d
+# Docker Compose commands (with auto-detection)
+docker-up: docker-down ## Start TerraPeak registry only (filesystem storage)
+	@echo "Starting TerraPeak registry (filesystem storage)..."
+	@echo "Using: $(COMPOSE_CMD)"
+	@echo "Config: registry/.cfg.default.yml (S3 disabled)"
+	$(COMPOSE_CMD) up -d terrapeak
+	@echo ""
+	@echo "TerraPeak started!"
+	@echo "Registry: http://localhost:8081"
+	@echo "Health check: http://localhost:8081/healthz"
 
-docker-compose-down: ## Stop docker-compose services
-	@echo "🐳 Stopping docker-compose services..."
-	docker-compose down
+docker-up-minio: docker-down ## Start TerraPeak registry with MinIO (S3 storage)
+	@echo "Starting TerraPeak with MinIO (S3 storage)..."
+	@echo "Using: $(COMPOSE_CMD)"
+	@echo "Config: Will be set to use MinIO"
+	@echo ""
+	@echo "Updating docker-compose to use MinIO config..."
+	@cp registry/.cfg.default.yml registry/.cfg.default.yml.backup 2>/dev/null || true
+	@cp registry/.cfg.minio.yml registry/.cfg.default.yml
+	@echo "Config updated to enable S3/MinIO"
+	@echo ""
+	$(COMPOSE_CMD) --profile minio up -d
+	@echo ""
+	@echo "TerraPeak and MinIO started!"
+	@echo "Registry: http://localhost:8081"
+	@echo "MinIO Console: http://localhost:9001"
+	@echo "   Username: minioadmin"
+	@echo "   Password: minioadmin"
+	@echo "Health check: http://localhost:8081/healthz"
+	@echo ""
+	@echo "Note: Config file was updated. Original backed up to .cfg.default.yml.backup"
+
+docker-down: ## Stop all TerraPeak services
+	@echo "Stopping all TerraPeak services..."
+	@echo "Using: $(COMPOSE_CMD)"
+	$(COMPOSE_CMD) --profile minio down
+	@echo ""
+	@echo "Restoring original config..."
+	@if [ -f registry/.cfg.default.yml.backup ]; then \
+		mv registry/.cfg.default.yml.backup registry/.cfg.default.yml; \
+		echo "Config restored to filesystem storage"; \
+	fi
+	@echo "All services stopped"
+
+docker-logs: ## Show docker-compose logs
+	@echo "Showing docker-compose logs..."
+	@echo "Using: $(COMPOSE_CMD)"
+	$(COMPOSE_CMD) --profile minio logs -f
+
+docker-restart: ## Restart all services
+	@echo "Restarting all TerraPeak services..."
+	@echo "Using: $(COMPOSE_CMD)"
+	$(COMPOSE_CMD) --profile minio restart
+
+docker-ps: ## Show running containers
+	@echo "Running TerraPeak containers:"
+	@echo "Using: $(COMPOSE_CMD)"
+	$(COMPOSE_CMD) --profile minio ps
 
 # Cleanup targets
 clean: ## Clean build artifacts and test files
-	@echo "🧹 Cleaning up..."
+	@echo "Cleaning up..."
 	cd registry && rm -f terrapeak terrapeak-linux
 	cd registry && rm -f coverage.out coverage.html
 	cd registry && rm -rf ./registry/ # Test storage directory
-	@echo "✅ Cleanup complete"
+	@echo "Cleanup complete"
 
 clean-all: clean ## Clean everything including dependencies
 	cd registry && go clean -modcache
@@ -135,124 +237,121 @@ clean-all: clean ## Clean everything including dependencies
 
 # Installation targets
 install: build ## Install TerraPeak binary to $GOPATH/bin
-	@echo "📦 Installing TerraPeak..."
+	@echo "Installing TerraPeak..."
 	cd registry && go install .
 
 # Release targets
 release-check: test lint vet ## Run all checks for release
-	@echo "🔍 Running release checks..."
-	@echo "✅ All release checks passed"
+	@echo "Running release checks..."
+	@echo "All release checks passed"
 
 # CI/CD targets
 ci: deps fmt vet lint test-coverage ## Run CI pipeline
-	@echo "🤖 CI pipeline complete"
+	@echo "CI pipeline complete"
 
 # Pre-commit targets
 pre-commit: ## Run all checks before commit/push
-	@echo "🚀 Running pre-commit checks..."
+	@echo "Running pre-commit checks..."
 	@echo "=================================="
 	@echo ""
-	@echo "1. 📦 Managing dependencies..."
+	@echo "1. Managing dependencies..."
 	@$(MAKE) deps
 	@echo ""
-	@echo "2. 🎨 Formatting code..."
+	@echo "2. Formatting code..."
 	@$(MAKE) fmt
 	@echo ""
-	@echo "3. 🔍 Running go vet..."
+	@echo "3. Running go vet..."
 	@$(MAKE) vet
 	@echo ""
-	@echo "4. 🧪 Running unit tests..."
+	@echo "4. Running unit tests..."
 	@$(MAKE) test-unit
 	@echo ""
-	@echo "5. 🏗️ Building application..."
+	@echo "5. Building application..."
 	@$(MAKE) build
 	@echo ""
-	@echo "✅ All pre-commit checks passed!"
-	@echo "🚀 Ready to commit and push!"
+	@echo "All pre-commit checks passed!"
+	@echo "Ready to commit and push!"
 
 pre-commit-quick: ## Quick pre-commit checks (faster)
-	@echo "⚡ Running quick pre-commit checks..."
+	@echo "Running quick pre-commit checks..."
 	@echo "====================================="
 	@echo ""
-	@echo "1. 🎨 Formatting code..."
+	@echo "1. Formatting code..."
 	@$(MAKE) fmt
 	@echo ""
-	@echo "2. 🔍 Running go vet..."
+	@echo "2. Running go vet..."
 	@$(MAKE) vet
 	@echo ""
-	@echo "3. 🧪 Running unit tests..."
+	@echo "3. Running unit tests..."
 	@$(MAKE) test-unit
 	@echo ""
-	@echo "4. 🏗️ Building application..."
+	@echo "4. Building application..."
 	@$(MAKE) build
 	@echo ""
-	@echo "✅ Quick pre-commit checks passed!"
-	@echo "🚀 Ready to commit and push!"
+	@echo "Quick pre-commit checks passed!"
+	@echo "Ready to commit and push!"
 
 pre-commit-full: ## Full pre-commit checks (comprehensive)
-	@echo "🔍 Running full pre-commit checks..."
+	@echo "Running full pre-commit checks..."
 	@echo "===================================="
 	@echo ""
-	@echo "1. 📦 Managing dependencies..."
+	@echo "1. Managing dependencies..."
 	@$(MAKE) deps
 	@echo ""
-	@echo "2. 🎨 Formatting code..."
+	@echo "2. Formatting code..."
 	@$(MAKE) fmt
 	@echo ""
-	@echo "3. 🔍 Running go vet..."
+	@echo "3. Running go vet..."
 	@$(MAKE) vet
 	@echo ""
-	@echo "4. 🧪 Running unit tests..."
+	@echo "4. Running unit tests..."
 	@$(MAKE) test-unit
 	@echo ""
-	@echo "5. 🧪 Running integration tests..."
+	@echo "5. Running integration tests..."
 	@$(MAKE) test-integration
 	@echo ""
-	@echo "6. 📊 Running tests with coverage..."
+	@echo "6. Running tests with coverage..."
 	@$(MAKE) test-coverage
 	@echo ""
-	@echo "7. 🏗️ Building application..."
+	@echo "7. Building application..."
 	@$(MAKE) build
 	@echo ""
-	@echo "8. 🧪 Testing API endpoints..."
+	@echo "8. Testing API endpoints..."
 	@$(MAKE) test-api
 	@echo ""
-	@echo "9. 🧪 Testing API downloads..."
-	@$(MAKE) test-api-download
-	@echo ""
-	@echo "✅ Full pre-commit checks passed!"
-	@echo "🚀 Ready to commit and push!"
+	@echo "Full pre-commit checks passed!"
+	@echo "Ready to commit and push!"
 
 git-push: ## Run full checks and push
-	@echo "🚀 Running pre-push checks..."
+	@echo "Running pre-push checks..."
 	@$(MAKE) pre-commit-full
 	@echo ""
-	@echo "🚀 Ready to push!"
+	@echo "Ready to push!"
 	git push origin main
-	@echo "✅ Push complete!"
+	@echo "Push complete!"
 
 # Quick targets for common workflows
 quick-test: fmt vet test-unit ## Quick test cycle (format, vet, unit tests)
 
 # API Testing targets
 test-api: ## Test API endpoints on localhost:8081
-	@echo "🧪 Testing TerraPeak API endpoints..."
+	@echo "Testing TerraPeak API endpoints..."
 	@echo "Testing health endpoint..."
-	@curl -s -f "http://localhost:8081/healthz" && echo "✅ Health check passed" || echo "❌ Health check failed"
+	@curl -s -f "http://localhost:8081/healthz" && echo "Health check passed" || echo "Health check failed"
 	@echo ""
 	@echo "Testing AWS provider versions..."
-	@curl -s "http://localhost:8081/v1/providers/hashicorp/aws/versions" | head -c 200 && echo "... ✅ AWS versions endpoint working" || echo "❌ AWS versions failed"
+	@curl -s "http://localhost:8081/v1/providers/hashicorp/aws/versions" | head -c 200 && echo "... AWS versions endpoint working" || echo "AWS versions failed"
 	@echo ""
 	@echo "Testing Kubernetes provider versions..."
-	@curl -s "http://localhost:8081/v1/providers/hashicorp/kubernetes/versions" | head -c 200 && echo "... ✅ Kubernetes versions endpoint working" || echo "❌ Kubernetes versions failed"
+	@curl -s "http://localhost:8081/v1/providers/hashicorp/kubernetes/versions" | head -c 200 && echo "... Kubernetes versions endpoint working" || echo "Kubernetes versions failed"
 	@echo ""
 	@echo "Testing proxy info..."
-	@curl -s "http://localhost:8081/proxy/info" | head -c 200 && echo "... ✅ Proxy info endpoint working" || echo "❌ Proxy info failed"
+	@curl -s "http://localhost:8081/proxy/info" | head -c 200 && echo "... Proxy info endpoint working" || echo "Proxy info failed"
 	@echo ""
-	@echo "🎉 API testing complete!"
+	@echo "API testing complete!"
 
 test-api-verbose: ## Test API endpoints with verbose output
-	@echo "🧪 Testing TerraPeak API endpoints (verbose)..."
+	@echo "Testing TerraPeak API endpoints (verbose)..."
 	@echo "=============================================="
 	@echo ""
 	@echo "1. Health Check:"
@@ -267,22 +366,67 @@ test-api-verbose: ## Test API endpoints with verbose output
 	@echo "4. Proxy Info:"
 	@curl -v "http://localhost:8081/proxy/info"
 	@echo ""
-	@echo "🎉 Verbose API testing complete!"
+	@echo "Verbose API testing complete!"
 
-test-api-download: ## Test file download endpoints
-	@echo "🧪 Testing TerraPeak download endpoints..."
-	@echo "Testing AWS provider download (this may take a moment)..."
-	@curl -s -I "http://localhost:8081/v1/providers/hashicorp/aws/5.0.0/download/linux/amd64" | head -5
+
+test-api-provider: ## Test Terraform provider discovery and download endpoints (AWS only)
+	@echo "Testing Terraform Provider API Endpoints (AWS Provider)..."
+	@echo "=============================================================="
 	@echo ""
-	@echo "Testing Kubernetes provider download..."
-	@curl -s -I "http://localhost:8081/v1/providers/hashicorp/kubernetes/3.0.0/download/linux/amd64" | head -5
-	@echo ""
-	@echo "🎉 Download testing complete!"
+	@FAILED=0; \
+	echo "1. Testing .well-known endpoint (service discovery)..."; \
+	echo "   GET http://localhost:8081/.well-known/terraform.json"; \
+	HTTP_CODE=$$(curl -s -o /tmp/test-response.json -w "%{http_code}" "http://localhost:8081/.well-known/terraform.json"); \
+	if [ "$$HTTP_CODE" = "200" ]; then \
+		cat /tmp/test-response.json | python3 -m json.tool; \
+		echo "Service discovery working (HTTP $$HTTP_CODE)"; \
+	else \
+		echo "Service discovery failed (HTTP $$HTTP_CODE)"; \
+		cat /tmp/test-response.json 2>/dev/null || true; \
+		FAILED=$$((FAILED + 1)); \
+	fi; \
+	echo ""; \
+	echo "2. Testing AWS provider versions endpoint..."; \
+	echo "   GET http://localhost:8081/v1/providers/hashicorp/aws/versions"; \
+	HTTP_CODE=$$(curl -s -o /tmp/test-response.json -w "%{http_code}" "http://localhost:8081/v1/providers/hashicorp/aws/versions"); \
+	if [ "$$HTTP_CODE" = "200" ]; then \
+		cat /tmp/test-response.json | python3 -m json.tool | head -20; \
+		echo "... AWS versions endpoint working (HTTP $$HTTP_CODE)"; \
+	else \
+		echo "AWS versions failed (HTTP $$HTTP_CODE)"; \
+		cat /tmp/test-response.json 2>/dev/null || true; \
+		FAILED=$$((FAILED + 1)); \
+	fi; \
+	echo ""; \
+	echo "3. Testing AWS provider download endpoint (5.100.0 darwin/arm64)..."; \
+	echo "   GET http://localhost:8081/v1/providers/hashicorp/aws/5.100.0/download/darwin/arm64"; \
+	HTTP_CODE=$$(curl -s -o /tmp/test-response.json -w "%{http_code}" "http://localhost:8081/v1/providers/hashicorp/aws/5.100.0/download/darwin/arm64"); \
+	curl -s -I "http://localhost:8081/v1/providers/hashicorp/aws/5.100.0/download/darwin/arm64" | head -5; \
+	if [ "$$HTTP_CODE" = "200" ]; then \
+		cat /tmp/test-response.json | python3 -m json.tool; \
+		echo "AWS download (darwin/arm64) endpoint working (HTTP $$HTTP_CODE)"; \
+	else \
+		echo "AWS download (darwin/arm64) failed (HTTP $$HTTP_CODE)"; \
+		cat /tmp/test-response.json 2>/dev/null || true; \
+		FAILED=$$((FAILED + 1)); \
+	fi; \
+	echo ""; \
+	rm -f /tmp/test-response.json; \
+	if [ $$FAILED -eq 0 ]; then \
+		echo ""; \
+		echo "Provider API testing complete! All tests PASSED"; \
+		echo "   Tested: .well-known, AWS versions, AWS download (darwin/arm64)"; \
+		exit 0; \
+	else \
+		echo ""; \
+		echo "Provider API testing FAILED! $$FAILED test(s) failed"; \
+		exit 1; \
+	fi
 
 dev-setup: deps ## Setup development environment
-	@echo "🔧 Setting up development environment..."
+	@echo "Setting up development environment..."
 	@echo ""
-	@echo "📦 Installing development dependencies..."
+	@echo "Installing development dependencies..."
 	@echo ""
 	@echo "Installing golangci-lint..."
 	@which golangci-lint > /dev/null || ( \
@@ -291,40 +435,93 @@ dev-setup: deps ## Setup development environment
 		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$GOPATH_BIN v1.54.2; \
 		echo "Add $$GOPATH_BIN to your PATH if not already there" \
 	)
-	@echo "✅ golangci-lint installed"
+	@echo "golangci-lint installed"
 	@echo ""
 	@echo "Installing entr (for watch mode)..."
 	@which entr > /dev/null || (echo "Please install entr manually:" && echo "  macOS: brew install entr" && echo "  Ubuntu/Debian: sudo apt-get install entr" && echo "  CentOS/RHEL: sudo yum install entr")
-	@echo "✅ entr check completed"
+	@echo "entr check completed"
 	@echo ""
 	@echo "Installing curl (for API testing)..."
 	@which curl > /dev/null || (echo "Please install curl manually:" && echo "  macOS: brew install curl" && echo "  Ubuntu/Debian: sudo apt-get install curl" && echo "  CentOS/RHEL: sudo yum install curl")
-	@echo "✅ curl check completed"
+	@echo "curl check completed"
 	@echo ""
 	@echo "Installing tree (for directory structure)..."
 	@which tree > /dev/null || (echo "Please install tree manually:" && echo "  macOS: brew install tree" && echo "  Ubuntu/Debian: sudo apt-get install tree" && echo "  CentOS/RHEL: sudo yum install tree")
-	@echo "✅ tree check completed"
+	@echo "tree check completed"
 	@echo ""
-	@echo "🔧 Development environment setup complete!"
-	@echo "📋 Installed tools:"
-	@echo "  ✅ golangci-lint (Go linter)"
-	@echo "  ✅ entr (file watcher)"
-	@echo "  ✅ curl (API testing)"
-	@echo "  ✅ tree (directory structure)"
+	@echo "Development environment setup complete!"
+	@echo "Installed tools:"
+	@echo "  golangci-lint (Go linter)"
+	@echo "  entr (file watcher)"
+	@echo "  curl (API testing)"
+	@echo "  tree (directory structure)"
 	@echo ""
-	@echo "🚀 Ready for development!"
+	@echo "Ready for development!"
 
 # Watch mode (requires entr)
 watch-test: ## Watch files and run tests on change (requires 'entr')
 	find registry -name "*.go" | entr -c make test-unit
 
+
+# =============================================================================
+# Help Commands
+# =============================================================================
+
+help-registry: ## Show registry-specific commands
+	@echo "Registry (Go) Commands:"
+	@echo "======================="
+	@echo "  make build              Build the TerraPeak binary"
+	@echo "  make build-linux        Build for Linux"
+	@echo "  make test               Run all tests"
+	@echo "  make test-unit          Run unit tests only"
+	@echo "  make test-integration   Run integration tests"
+	@echo "  make test-coverage      Run tests with coverage"
+	@echo "  make test-benchmark     Run benchmark tests"
+	@echo "  make fmt                Format Go code"
+	@echo "  make vet                Run go vet"
+	@echo "  make lint               Run golangci-lint"
+	@echo "  make deps               Download and tidy dependencies"
+	@echo "  make run                Run TerraPeak server"
+	@echo "  make docker-build       Build registry Docker image"
+	@echo "  make docker-run         Run registry in Docker"
+
+
+help-docker: ## Show Docker-specific commands
+	@echo "Docker Commands:"
+	@echo "================"
+	@echo ""
+	@echo "Build & Run:"
+	@echo "  make docker-build         Build registry Docker image"
+	@echo "  make docker-run           Run registry in Docker (standalone)"
+	@echo ""
+	@echo "Docker Compose (auto-detects 'docker compose' or 'docker-compose'):"
+	@echo "  make docker-up            Start registry only (filesystem storage)"
+	@echo "  make docker-up-minio      Start registry + MinIO (S3 storage)"
+	@echo "  make docker-down          Stop all services"
+	@echo "  make docker-logs          Show service logs"
+	@echo "  make docker-restart       Restart all services"
+	@echo "  make docker-ps            Show running containers"
+	@echo ""
+	@echo "Configuration:"
+	@echo "  - docker-up:       Uses .cfg.default.yml (S3 disabled)"
+	@echo "  - docker-up-minio: Auto-switches to MinIO config (S3 enabled)"
+	@echo ""
+	@echo "MinIO Access (when using docker-up-minio):"
+	@echo "  - Console: http://localhost:9001"
+	@echo "  - API:     http://localhost:9000"
+	@echo "  - User:    minioadmin / minioadmin"
+
 # Status check
 status: ## Check project status
 	@echo "TerraPeak Status"
-	@echo "================================+"
+	@echo "================================"
 	@echo "Go version: $(shell go version)"
+	@echo "Docker version: $(shell docker --version 2>/dev/null || echo 'Docker not installed')"
 	@echo "Git branch: $(shell git branch --show-current 2>/dev/null || echo 'not a git repo')"
 	@echo "Git status: $(shell git status --porcelain 2>/dev/null | wc -l | xargs) files changed"
-	@echo "Dependencies: $(shell cd registry && go list -m all | wc -l | xargs) modules"
-	@echo "Test files: $(shell find registry -name "*_test.go" | wc -l | xargs) files"
-	@echo "Source files: $(shell find registry -name "*.go" -not -name "*_test.go" | wc -l | xargs) files"
+	@echo "Registry dependencies: $(shell cd registry && go list -m all | wc -l | xargs) modules"
+	@echo "Registry test files: $(shell find registry -name "*_test.go" | wc -l | xargs) files"
+	@echo "Registry source files: $(shell find registry -name "*.go" -not -name "*_test.go" | wc -l | xargs) files"
+	@echo ""
+	@echo "Services:"
+	@echo "  Backend: http://localhost:8081 ($(shell curl -s http://localhost:8081/healthz 2>/dev/null && echo 'running' || echo 'not running'))"
