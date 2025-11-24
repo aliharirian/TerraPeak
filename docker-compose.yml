@@ -1,12 +1,13 @@
 services:
   terrapeak:
-    image: aliharirian/terrapeak:latest
+    image: aliharirian/terrapeak-registry:latest
     container_name: terrapeak
+    pull_policy: missing
     ports:
       - "8081:8081"
     volumes:
       - ./registry/.cfg.default.yml:/app/cfg.yml:ro
-      - terrapeak-data:/data
+      - terrapeak-data:/data/registry
     environment:
       - LOG_LEVEL=info
     networks:
@@ -17,11 +18,10 @@ services:
       timeout: 3s
       retries: 3
     restart: unless-stopped
-    depends_on:
-      minio:
-        condition: service_healthy
 
   minio:
+    profiles:
+      - minio
     image: minio/minio:latest
     container_name: minio
     ports:

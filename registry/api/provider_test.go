@@ -112,7 +112,7 @@ func TestGetVersionListWithMockUpstream(t *testing.T) {
 
 	cfg := createTestConfig()
 	cfg.Storage.File.Path = tempDir
-	cfg.Terraform.RegistryUrl = mockUpstream.URL
+	cfg.Registry.Url = mockUpstream.URL
 
 	service, err := New(cfg)
 	if err != nil {
@@ -176,7 +176,7 @@ func TestGetProviderDownloadDetailsWithMockUpstream(t *testing.T) {
 
 	cfg := createTestConfig()
 	cfg.Storage.File.Path = tempDir
-	cfg.Terraform.RegistryUrl = mockUpstream.URL
+	cfg.Registry.Url = mockUpstream.URL
 	cfg.Server.Domain = "https://cache.example.com"
 
 	service, err := New(cfg)
@@ -235,7 +235,7 @@ func TestGetVersionListUpstreamError(t *testing.T) {
 
 	cfg := createTestConfig()
 	cfg.Storage.File.Path = tempDir
-	cfg.Terraform.RegistryUrl = "http://nonexistent-upstream.example.com"
+	cfg.Registry.Url = "http://nonexistent-upstream.example.com"
 
 	service, err := New(cfg)
 	if err != nil {
@@ -267,7 +267,7 @@ func TestGetProviderDownloadDetailsUpstreamError(t *testing.T) {
 
 	cfg := createTestConfig()
 	cfg.Storage.File.Path = tempDir
-	cfg.Terraform.RegistryUrl = "http://nonexistent-upstream.example.com"
+	cfg.Registry.Url = "http://nonexistent-upstream.example.com"
 
 	service, err := New(cfg)
 	if err != nil {

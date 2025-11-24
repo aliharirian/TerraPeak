@@ -29,8 +29,8 @@ server:
 log:
   level: "debug"
 
-terraform:
-  registry_url: "https://registry.terraform.io"
+registry:
+  url: "https://registry.terraform.io"
 
 storage:
   s3:
@@ -57,8 +57,8 @@ server:
   addr: ":8081"
 log:
   level: "info"
-terraform:
-  registry_url: "https://registry.terraform.io"
+registry:
+  url: "https://registry.terraform.io"
 `,
 			expectedAddr:  ":8081",
 			expectedLevel: "info",
@@ -127,8 +127,8 @@ func TestConfigureWithInvalidFile(t *testing.T) {
 	configContent := `
 server:
   addr: ":8080"
-terraform:
-  registry_url: "https://registry.terraform.io"
+registry:
+  url: "https://registry.terraform.io"
 `
 	if _, err := tmpFile.WriteString(configContent); err != nil {
 		t.Fatalf("Failed to write config content: %v", err)
@@ -194,8 +194,8 @@ server:
   addr: ":9999"
 log:
   level: "warn"
-terraform:
-  registry_url: "https://registry.terraform.io"
+registry:
+  url: "https://registry.terraform.io"
 `
 	if _, err := tmpFile.WriteString(configContent); err != nil {
 		t.Fatalf("Failed to write config: %v", err)
@@ -235,8 +235,8 @@ func TestConfigDefaults(t *testing.T) {
 	configContent := `
 server:
   addr: ":8080"
-terraform:
-  registry_url: "https://registry.terraform.io"
+registry:
+  url: "https://registry.terraform.io"
 `
 	if _, err := tmpFile.WriteString(configContent); err != nil {
 		t.Fatalf("Failed to write config: %v", err)

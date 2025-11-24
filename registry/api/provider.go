@@ -30,7 +30,7 @@ func (s *Service) GetVersionList(w http.ResponseWriter, r *http.Request) {
 
 	// Cache miss - fetch from upstream
 	logger.Infof("Cache MISS: Fetching version list for %s/%s from upstream", namespace, name)
-	upstreamURL := s.cfg.Terraform.RegistryUrl + "/v1/providers/" + namespace + "/" + name + "/versions"
+	upstreamURL := s.cfg.Registry.Url + "/v1/providers/" + namespace + "/" + name + "/versions"
 
 	// Use proxy-aware client for upstream request
 	resp, err := s.proxyHandler.GetClient().Get(upstreamURL)
@@ -80,7 +80,7 @@ func (s *Service) GetProviderDownloadDetails(w http.ResponseWriter, r *http.Requ
 
 	// Cache miss - fetch from upstream
 	logger.Infof("Cache MISS: Fetching download details for %s/%s/%s/%s/%s from upstream", namespace, name, version, os, arch)
-	upstreamURL := s.cfg.Terraform.RegistryUrl + "/v1/providers/" + namespace + "/" + name + "/" + version + "/download/" + os + "/" + arch
+	upstreamURL := s.cfg.Registry.Url + "/v1/providers/" + namespace + "/" + name + "/" + version + "/download/" + os + "/" + arch
 
 	// Use proxy-aware client for upstream request
 	resp, err := s.proxyHandler.GetClient().Get(upstreamURL)
