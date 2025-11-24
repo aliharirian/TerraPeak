@@ -1,3 +1,20 @@
+## [1.3.1](https://github.com/aliharirian/TerraPeak/compare/v1.3.0...v1.3.1) (2025-11-24)
+
+### 🚀 Features
+
+* init bug report template for improved issue tracking ([9f8aed4](https://github.com/aliharirian/TerraPeak/commit/9f8aed493ffc0fd0daf745f160137b883acdecb6))
+
+### 🐛 Bug Fixes
+
+* **ci:** consolidate workflow improvements and release config updates ([ea7d71e](https://github.com/aliharirian/TerraPeak/commit/ea7d71ea036ad04b2d8ef7b68db71d75308c5025))
+* **registry:** add docs, CI and registry fixes ([2db1f97](https://github.com/aliharirian/TerraPeak/commit/2db1f97910c827d0cfe933c7a6ed14ec843c2803))
+* **registry:** update S3/MinIO configuration in .cfg.default.yml and docker-compose.yml for improved clarity and functionality & rename Terraform registry configuration to improve clarity ([7e2f907](https://github.com/aliharirian/TerraPeak/commit/7e2f9071d87643bbe4e91d659e33417f1c237d68))
+* **tests:** rename proxy configuration fields for consistency and clarity ([27bdeb9](https://github.com/aliharirian/TerraPeak/commit/27bdeb99fc2e2013d42e13e1a19d065f22393de6))
+
+### 📚 Documentation
+
+* **registry:** write fully documentation ([0e4ee56](https://github.com/aliharirian/TerraPeak/commit/0e4ee56264655691453ec60989b8d75dac8adfc9))
+
 # [1.3.0](https://github.com/aliharirian/TerraPeak/compare/v1.2.2...v1.3.0) (2025-11-21)
 
 
