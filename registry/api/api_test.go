@@ -21,10 +21,10 @@ func createTestConfig() *config.Config {
 		}{
 			Domain: "https://test.example.com",
 		},
-		Terraform: struct {
-			RegistryUrl string `yaml:"registry_url"`
+		Registry: struct {
+			Url string `yaml:"url"`
 		}{
-			RegistryUrl: "https://registry.terraform.io",
+			Url: "https://registry.terraform.io",
 		},
 		Storage: struct {
 			S3 struct {
