@@ -1,6 +1,6 @@
 services:
   terrapeak:
-    image: aliharirian/terrapeak:latest
+    image: aliharirian/terrapeak-registry:latest
     container_name: terrapeak
     pull_policy: missing
     ports:

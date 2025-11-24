@@ -1,367 +1,112 @@
 # TerraPeak Documentation
 
-Comprehensive documentation for TerraPeak - Terraform Registry Caching Proxy.
+Welcome to the TerraPeak documentation! This page serves as a guide to help you navigate our comprehensive documentation.
 
-## Table of Contents
+## 📚 Documentation Structure
 
-- [Architecture Overview](#architecture-overview)
-- [Storage Design](#storage-design)
-- [Caching Strategy](#caching-strategy)
-- [API Design](#api-design)
-- [Configuration](#configuration)
-- [Development Guide](#development-guide)
-- [Testing](#testing)
-- [Monitoring](#monitoring)
-- [Performance](#performance)
+TerraPeak's documentation is organized into the following sections:
 
-## Architecture Overview
+### Main Documentation
 
-TerraPeak is designed as a high-performance caching proxy that sits between Terraform clients and the official Terraform Registry. It provides intelligent caching with multiple storage backends and transparent request proxying.
+- **[README](../README.md)** - Quick start guide and overview
+- **[INSTALLATION](INSTALLATION.md)** - Detailed installation instructions for all deployment methods
+- **[CONTRIBUTING](../CONTRIBUTING.md)** - Guidelines for contributing to TerraPeak
+- **[LICENSE](../LICENSE)** - Apache License 2.0
 
-### Core Components
+### Registry Documentation
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Terraform     │───▶│   TerraPeak     │───▶│  Terraform      │
-│   Client        │    │   Proxy         │    │  Registry       │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                       ┌─────────────────┐
-                       │   Storage       │
-                       │  (MinIO/File)   │
-                       └─────────────────┘
-```
+Located in [`docs/registry/`](registry/):
 
-### Application Structure
+- **[API Documentation](registry/API.md)** - Complete API reference and endpoint documentation
+- **[Architecture](registry/ARCHITECTURE.md)** - System design, component details, and technical architecture
 
-```
-registry/
-├── main.go              # Application entry point
-├── api/                 # HTTP API layer
-│   ├── api.go          # Core API service
-│   ├── provider.go     # Provider-specific endpoints
-│   └── module.go       # Module-specific endpoints
-├── store/              # Storage abstraction layer
-│   └── store.go        # MinIO/File storage implementation
-├── config/             # Configuration management
-│   └── config.go       # Configuration structure and loading
-├── logger/             # Logging utilities
-│   ├── logger.go       # Core logging setup
-│   └── adapter.go      # HTTP middleware adapter
-└── metrics/            # Health and metrics
-    ├── health.go       # Health check endpoints
-    └── metrics.go      # Application metrics
-```
+## 🚀 Quick Navigation
 
-## Storage Design
+### Getting Started
+1. Start with the [README](../README.md) for a quick overview
+2. Follow the [INSTALLATION guide](INSTALLATION.md) to deploy TerraPeak
+3. Configure your Terraform to use TerraPeak
 
-### Dual Storage Backend
+### For Developers
+1. Read the [ARCHITECTURE](registry/ARCHITECTURE.md) documentation
+2. Review the [CONTRIBUTING](../CONTRIBUTING.md) guidelines
+3. Check the [API Documentation](registry/API.md) for endpoint details
 
-TerraPeak supports two storage backends that can be configured based on deployment needs:
+### For API Users
+1. Review [API Documentation](registry/API.md) for all available endpoints
+2. Check the configuration section in the [README](../README.md)
+3. See usage examples and troubleshooting
 
-#### MinIO Object Storage
-- **Use Case**: Distributed deployments, high availability
-- **Benefits**: Scalable, S3-compatible, metadata support
-- **Storage**: Objects in S3-compatible buckets
-- **Metadata**: Separate metadata objects with checksums
+## 📖 Documentation Topics
 
-#### Local File System
-- **Use Case**: Single-node deployments, development
-- **Benefits**: Simple setup, no external dependencies
-- **Storage**: Direct file system writes
-- **Metadata**: Sidecar `.metadata.json` and `.success` files
+### Installation & Deployment
+- [Docker Compose Setup](INSTALLATION.md#docker-compose-recommended)
+- [Docker Installation](INSTALLATION.md#docker)
+- [Binary Installation](INSTALLATION.md#binary-installation)
+- [Kubernetes Deployment](INSTALLATION.md#kubernetes-deployment)
+- [Building from Source](INSTALLATION.md#build-from-source)
 
-### Storage Interface
+### Configuration
+- [Basic Configuration](../README.md#configuration)
+- [Storage Backends](registry/ARCHITECTURE.md#storage-architecture)
+- [Proxy Configuration](INSTALLATION.md#run-with-sproxy-backend)
+- [SSL/TLS Setup](../README.md#ssltls-setup)
 
-```go
-type Store struct {
-    config *config.Config
-    client *minio.Client // nil for file storage
-}
+### API Reference
+- [Registry API Endpoints](registry/API.md#registry-api)
+- [Proxy API Endpoints](registry/API.md#proxy-api)
+- [Error Handling](registry/API.md#error-handling)
+- [Response Format](registry/API.md#response-format)
 
-// Core methods
-func (s *Store) HandleRequest(w http.ResponseWriter, r *http.Request)
-func (s *Store) FileExists(filePath string) bool
-func (s *Store) ReadFromStorage(filePath string) ([]byte, error)
-func (s *Store) Save(filename string, data []byte) error
-```
+### Architecture & Design
+- [System Overview](registry/ARCHITECTURE.md#system-architecture)
+- [Component Design](registry/ARCHITECTURE.md#component-design)
+- [Storage Architecture](registry/ARCHITECTURE.md#storage-architecture)
+- [Caching Strategy](registry/ARCHITECTURE.md#caching-strategy)
+- [Performance Optimization](registry/ARCHITECTURE.md#performance-optimization)
 
-### File Organization
+### Development
+- [Development Setup](../CONTRIBUTING.md#getting-started)
+- [Development Workflow](../CONTRIBUTING.md#development-workflow)
+- [Testing Guidelines](../CONTRIBUTING.md#testing)
+- [Coding Standards](../CONTRIBUTING.md#coding-standards)
 
-#### File System Layout
-```
-./registry/
-├── registry/v1/                    # API response cache
-│   ├── versions/                   # Provider version lists
-│   │   └── {namespace}/{name}
-│   └── download/                   # Download metadata
-│       └── {namespace}/{name}/{version}/{os}/{arch}
-├── releases.hashicorp.com/         # Provider binaries
-│   └── terraform-provider-{name}/{version}/
-│       ├── terraform-provider-{name}_{version}_{os}_{arch}.zip
-│       ├── terraform-provider-{name}_{version}_{os}_{arch}.zip.metadata.json
-│       └── terraform-provider-{name}_{version}_{os}_{arch}.zip.success
-└── github.com/                     # Module archives
-    └── {owner}/{repo}/archive/{ref}.tar.gz
-```
+## 🔍 Need Help?
 
-#### MinIO Object Layout
-```
-bucket: terrapeak-cache
-├── registry/v1/versions/{namespace}/{name}
-├── registry/v1/download/{namespace}/{name}/{version}/{os}/{arch}
-├── releases.hashicorp.com/terraform-provider-{name}/{version}/{file}
-└── releases.hashicorp.com/terraform-provider-{name}/{version}/{file}.metadata.json
-```
+- **Bug Reports**: [Create an issue](https://github.com/aliharirian/TerraPeak/issues/new)
+- **Questions**: Use [GitHub Discussions](https://github.com/aliharirian/TerraPeak/discussions)
+- **General Support**: See [README - Support section](../README.md#support)
 
-## Caching Strategy
-
-### Cache Key Design
-
-Cache keys follow a hierarchical structure for efficient organization:
-
-- **API Responses**: `registry/v1/{type}/{namespace}/{name}[/{version}][/{os}][/{arch}]`
-- **Provider Binaries**: `{original-url-path}`
-- **Module Archives**: `{original-url-path}`
-
-### Cache Workflow
-
-```mermaid
-graph TD
-    A[Incoming Request] --> B{Cache Hit?}
-    B -->|Yes| C[Serve from Cache]
-    B -->|No| D[Fetch from Upstream]
-    D --> E[Stream to Storage]
-    E --> F[Generate Metadata]
-    F --> G[Serve to Client]
-    C --> H[Add X-Cache-Status: HIT]
-    G --> I[Add X-Cache-Status: MISS]
-```
-
-### Cache Headers
-
-- `X-Cache-Status: HIT` - Content served from cache
-- `X-Cache-Status: MISS` - Content fetched from upstream
-
-### Streaming Architecture
-
-TerraPeak implements efficient streaming to avoid memory pressure:
-
-```go
-// Stream directly to storage while serving client
-reader := io.TeeReader(sourceStream, hashWriter)
-multiWriter := io.MultiWriter(responseWriter, storageWriter)
-io.Copy(multiWriter, reader)
-```
-
-## API Design
-
-### Registry Compatibility
-
-TerraPeak implements the Terraform Registry API specification:
-
-- **Discovery**: `/.well-known/terraform.json`
-- **Provider Versions**: `/v1/providers/{namespace}/{name}/versions`
-- **Provider Download**: `/v1/providers/{namespace}/{name}/{version}/download/{os}/{arch}`
-- **Module Versions**: `/v1/modules/{namespace}/{name}/{provider}/versions`
-
-### URL Rewriting
-
-Provider download URLs are rewritten to point back to TerraPeak:
-
-```go
-func AppFirstURL(base any, cacherURL string) any {
-    // Transform: https://releases.hashicorp.com/terraform-provider-aws/5.0.0/...
-    // To: https://terrapeak.domain.com/releases.hashicorp.com/terraform-provider-aws/5.0.0/...
-}
-```
-
-### Error Handling
-
-- **Upstream Unavailable**: Serve cached content if available
-- **Cache Miss**: Transparent proxy to upstream
-- **Storage Errors**: Log and fallback to upstream
-- **Invalid Requests**: Standard HTTP error responses
-
-## Configuration
-
-### Configuration Structure
-
-```go
-type Config struct {
-    Server struct {
-        Addr         string `yaml:"addr"`
-        ReadTimeout  int    `yaml:"read_timeout"`
-        WriteTimeout int    `yaml:"write_timeout"`
-        IdleTimeout  int    `yaml:"idle_timeout"`
-        Domain       string `yaml:"domain"`
-    } `yaml:"server"`
-
-    Log struct {
-        Level string `yaml:"level"`
-    } `yaml:"log"`
-
-    Terraform struct {
-        RegistryUrl string `yaml:"registry_url"`
-    } `yaml:"terraform"`
-
-    Storage struct {
-        Minio struct {
-            Enabled       bool   `yaml:"enabled"`
-            Endpoint      string `yaml:"endpoint"`
-            Region        string `yaml:"region"`
-            AccessKey     string `yaml:"access_key"`
-            SecretKey     string `yaml:"secret_key"`
-            Bucket        string `yaml:"bucket"`
-            SkipSSLVerify bool   `yaml:"skip_ssl_verify"`
-        } `yaml:"minio"`
-        File struct {
-            Path string `yaml:"path"`
-        } `yaml:"file"`
-    } `yaml:"storage"`
-}
-```
-
-### Configuration Loading
-
-```go
-func Load(path string) (*Config, error) {
-    // YAML file parsing with validation
-    // Environment variable override support
-    // Default value assignment
-}
-```
-
-## Development Guide
-
-### Code Organization
-
-- **Separation of Concerns**: Each package has a single responsibility
-- **Dependency Injection**: Configuration passed to constructors
-- **Interface-Based Design**: Storage abstraction allows multiple backends
-- **Error Handling**: Comprehensive error propagation and logging
-
-### Key Design Patterns
-
-1. **Strategy Pattern**: Storage backend selection
-2. **Adapter Pattern**: HTTP middleware integration
-3. **Proxy Pattern**: Transparent upstream proxying
-4. **Factory Pattern**: Component initialization
-
-### Adding New Features
-
-1. **Storage Operations**: Extend the `Store` interface
-2. **API Endpoints**: Add handlers to `api` package
-3. **Configuration**: Update `Config` struct and validation
-4. **Middleware**: Implement in `logger` or `metrics` packages
-
-## Testing
-
-### Testing Strategy
-
-- **Unit Tests**: Individual component testing in isolation
-- **Integration Tests**: Full application workflow testing
-- **API Tests**: HTTP endpoint testing with mock servers
-- **Performance Tests**: Benchmark testing for critical paths
-
-### Test Categories
+## 🗺️ Document Map
 
 ```
-registry/
-├── *_test.go           # Unit tests alongside source files
-├── integration_test.go # Full application integration tests
-├── run_tests.sh       # Test automation script
-└── Makefile           # Build and test targets
+TerraPeak/
+├── README.md                    # Main project overview
+├── CONTRIBUTING.md              # Contribution guidelines
+├── LICENSE                      # Apache 2.0 License
+├── CHANGELOG.md                 # Version history
+├── docs/
+│   ├── Document.md             # This navigation guide
+│   ├── INSTALLATION.md         # Installation guide
+│   └── registry/
+│       ├── API.md              # API reference
+│       └── ARCHITECTURE.md     # Architecture documentation
+└── registry/                    # Source code
+    └── [Go source files]
 ```
 
-### Coverage Requirements
+## 📝 Contributing to Documentation
 
-- **Minimum Coverage**: 60% overall
-- **Critical Paths**: 90% coverage for storage and API
-- **Error Handling**: All error paths must be tested
+Documentation improvements are always welcome! If you find any issues or want to improve the documentation:
 
-### Mock Usage
+1. Fork the repository
+2. Make your changes
+3. Submit a pull request
 
-- **HTTP Servers**: `httptest.Server` for upstream mocking
-- **Temporary Storage**: `os.MkdirTemp` for file system tests
-- **Configuration**: Test-specific config objects
-
-## Monitoring
-
-### Structured Logging
-
-TerraPeak uses structured JSON logging with zerolog:
-
-```json
-{
-  "level": "info",
-  "time": "2023-12-07T10:30:45.123Z",
-  "method": "GET",
-  "path": "/v1/providers/hashicorp/aws/versions",
-  "status": 200,
-  "bytes": 1024,
-  "elapsed": "150ms",
-  "remote_addr": "192.168.1.100:12345",
-  "user_agent": "terraform/1.6.0",
-  "message": "HTTP GET /v1/providers/hashicorp/aws/versions - 200 (OK) - 1024 bytes in 150ms"
-}
-```
-
-### Log Levels
-
-- **Debug**: Cache operations, internal state changes
-- **Info**: Request/response logging, cache status
-- **Warn**: Non-fatal issues, fallback operations
-- **Error**: Service errors, upstream failures
-- **Fatal**: Startup failures, critical errors
-
-### Health Monitoring
-
-- **Health Endpoint**: `/healthz` - Service availability
-- **Metrics Endpoint**: `/metrics` - Application metrics
-- **Storage Health**: Backend connectivity validation
-
-### Observability
-
-- **Request Tracing**: Unique request IDs
-- **Performance Metrics**: Response times, cache hit rates
-- **Error Tracking**: Error categorization and alerting
-- **Resource Usage**: Memory, disk, network utilization
-
-## Performance
-
-### Optimization Strategies
-
-1. **Streaming**: Direct data streaming to avoid buffering
-2. **Concurrent Processing**: Go routines for parallel operations
-3. **Efficient Hashing**: Hardware-accelerated checksums
-4. **Memory Management**: Minimal allocations, buffer reuse
-
-### Performance Characteristics
-
-- **Cache Hit**: Sub-10ms response times
-- **Cache Miss**: Proxy overhead < 5ms
-- **Streaming**: Memory usage constant regardless of file size
-- **Concurrent Requests**: Handles 1000+ concurrent connections
-
-### Benchmarking
-
-```bash
-# Run performance tests
-go test -bench=. -benchmem ./...
-
-# Load testing
-make performance-test
-```
-
-### Scaling Considerations
-
-- **Horizontal Scaling**: Multiple TerraPeak instances with shared MinIO
-- **Vertical Scaling**: CPU/memory tuning for high throughput
-- **Storage Scaling**: MinIO cluster for petabyte-scale caching
-- **Network Optimization**: CDN integration for global distribution
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for detailed guidelines.
 
 ---
 
-For implementation details and code examples, refer to the source code in the `registry/` directory.
+**Last Updated**: November 2025
+**Version**: 1.0+
+

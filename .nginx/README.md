@@ -2,22 +2,21 @@
 
 This directory contains the Nginx configuration for TerraPeak with SSL support.
 
-## 📁 Files
+## Files
 
 - `default.conf` - Nginx configuration with SSL proxy
 - `docker-compose.nginx.yml` - Docker Compose with Nginx + TerraPeak + MinIO
-- `setup-ssl.sh` - SSL certificate setup helper script
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Get SSL Certificates
 
 ```bash
 # Option 1: Using Certbot (recommended)
-sudo certbot certonly --standalone -d tr.tesaco.sbs
+sudo certbot certonly --standalone -d terrapeak.yourdomain.com
 
 # Option 2: Using Docker
-docker run --rm -v /etc/letsencrypt:/etc/letsencrypt certbot/certbot certonly --standalone -d tr.tesaco.sbs
+docker run --rm -v /etc/letsencrypt:/etc/letsencrypt certbot/certbot certonly --standalone -d terrapeak.yourdomain.com
 ```
 
 ### 2. Start Services
@@ -38,13 +37,13 @@ docker compose -f docker-compose.nginx.yml logs terrapeak
 
 ```bash
 # Test HTTPS endpoint
-curl -I https://tr.tesaco.sbs/healthz
+curl -I https://terrapeak.yourdomain.com/healthz
 
 # Test HTTP redirect
-curl -I http://tr.tesaco.sbs/healthz
+curl -I http://terrapeak.yourdomain.com/healthz
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Nginx Configuration (`default.conf`)
 
@@ -60,24 +59,24 @@ curl -I http://tr.tesaco.sbs/healthz
 - **MinIO**: Object storage (ports 9000/9001)
 - **Networks**: All services communicate via `terrapeak-network`
 
-## 📋 SSL Certificate Requirements
+## SSL Certificate Requirements
 
 Your SSL certificates must be located at:
 ```
-/etc/letsencrypt/live/tesaco.sbs/
+/etc/letsencrypt/live/terrapeak.yourdomain.com/
 ├── fullchain.pem    # Certificate chain
 └── privkey.pem      # Private key
 ```
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Check SSL Certificates
 ```bash
 # Verify certificate exists
-ls -la /etc/letsencrypt/live/tesaco.sbs/
+ls -la /etc/letsencrypt/live/terrapeak.yourdomain.com/
 
 # Check certificate validity
-openssl x509 -in /etc/letsencrypt/live/tesaco.sbs/fullchain.pem -text -noout
+openssl x509 -in /etc/letsencrypt/live/terrapeak.yourdomain.com/fullchain.pem -text -noout
 ```
 
 ### Check Nginx Configuration
@@ -101,14 +100,14 @@ curl http://localhost:8081/healthz
 docker compose -f docker-compose.nginx.yml logs nginx
 ```
 
-## 🌐 Access Points
+## Access Points
 
-- **TerraPeak (HTTPS)**: https://tr.tesaco.sbs
-- **TerraPeak (HTTP)**: http://tr.tesaco.sbs (redirects to HTTPS)
+- **TerraPeak (HTTPS)**: https://terrapeak.yourdomain.com
+- **TerraPeak (HTTP)**: http://terrapeak.yourdomain.com (redirects to HTTPS)
 - **MinIO Console**: http://localhost:9001 (admin: minioadmin/minioadmin)
 - **MinIO API**: http://localhost:9000
 
-## 🔄 SSL Certificate Renewal
+## SSL Certificate Renewal
 
 Let's Encrypt certificates expire every 90 days. Set up automatic renewal:
 
@@ -120,10 +119,9 @@ sudo crontab -e
 0 12 * * * /usr/bin/certbot renew --quiet && docker compose -f /path/to/docker-compose.nginx.yml restart nginx
 ```
 
-## 📝 Notes
+## Notes
 
 - TerraPeak is only accessible internally (no external port)
 - All external traffic goes through Nginx
 - SSL certificates are mounted read-only from host
 - Nginx logs are stored in Docker volume `nginx-logs`
-
