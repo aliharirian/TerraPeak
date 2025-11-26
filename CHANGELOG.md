@@ -1,3 +1,20 @@
+## [1.4.0](https://github.com/aliharirian/TerraPeak/compare/v1.3.1...v1.4.0) (2025-11-26)
+
+### 🚀 Features
+
+* add Docker support with multi-stage build and health check endpoint ([807248e](https://github.com/aliharirian/TerraPeak/commit/807248e7d0f452e3e6204b286a8cfaeb442b46ea))
+* init landing page ([0b16bfe](https://github.com/aliharirian/TerraPeak/commit/0b16bfe9a649d6da2ec579c85a8c78dfae2e6d48))
+* **landing:** add landing page ([d0dd92a](https://github.com/aliharirian/TerraPeak/commit/d0dd92a0c591ab5409db33be0c6fa57aacbf791e))
+
+### 📚 Documentation
+
+* add demo section and logo to README for improved user guidance ([46d140f](https://github.com/aliharirian/TerraPeak/commit/46d140f366f3fee4676b426592ed7450d74725d3))
+
+### 👷 CI/CD
+
+* simplify release configuration by removing unused prerelease branches ([c1eb634](https://github.com/aliharirian/TerraPeak/commit/c1eb634e5310269d133e1a12d523d0a7586ab996))
+* update CI configuration to include landing page Docker build ([5d12f26](https://github.com/aliharirian/TerraPeak/commit/5d12f269b9acb1efbf0701825ddd124e07522c47))
+
 ## [1.3.1](https://github.com/aliharirian/TerraPeak/compare/v1.3.0...v1.3.1) (2025-11-24)
 
 ### 🚀 Features
