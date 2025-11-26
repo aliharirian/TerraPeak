@@ -28,7 +28,6 @@ permissions:
 
 env:
   DOCKERHUB_REGISTRY: docker.io
-  REGISTRY_IMAGE_NAME: terrapeak-registry
   GO_VERSION: "1.25"
 
 jobs:
@@ -236,7 +235,10 @@ jobs:
             context: ./registry
             dockerfile: ./registry/Dockerfile
             image: terrapeak-registry
-
+          - name: landing
+            context: ./landing
+            dockerfile: ./landing/Dockerfile
+            image: terrapeak-landing
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -327,32 +329,3 @@ jobs:
             LICENSE
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  notify:
-    name: Deployment Notification
-    runs-on: ubuntu-latest
-    needs: [versioning, build-docker-images, release-artifacts]
-    if: always() && (needs.versioning.outputs.released == 'true')
-    steps:
-      - name: Deployment Summary
-        run: |
-          echo "## TerraPeak Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Release Information" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version**: v${{ needs.versioning.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Release Type**: ${{ needs.versioning.outputs.release_type }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Docker Images Published" >> $GITHUB_STEP_SUMMARY
-          echo "- **Registry**: \`${{ github.repository_owner }}/terrapeak-registry:v${{ needs.versioning.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Web**: \`${{ github.repository_owner }}/terrapeak-web:v${{ needs.versioning.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Pull Commands" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ github.repository_owner }}/terrapeak-registry:v${{ needs.versioning.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ github.repository_owner }}/terrapeak-web:v${{ needs.versioning.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Binary Releases" >> $GITHUB_STEP_SUMMARY
-          echo "Cross-platform binaries available in GitHub Releases" >> $GITHUB_STEP_SUMMARY
