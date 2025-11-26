@@ -10,6 +10,7 @@
 .PHONY: help build test test-unit test-integration test-coverage test-api-provider clean fmt lint vet deps run docker-build docker-run
 .PHONY: docker-up docker-up-minio docker-down docker-logs docker-restart docker-ps
 .PHONY: dev-setup status quick-test watch-test help-registry help-docker
+.PHONY: landing-deps landing-dev landing-build landing-docker-build landing-docker-run landing-docker-up landing-docker-down landing-clean
 
 # Default target
 help: ## Show this help message
@@ -26,6 +27,13 @@ help: ## Show this help message
 	@echo "  make test               Run all tests"
 	@echo "  make run                Run TerraPeak server"
 	@echo "  make docker-build       Build registry Docker image"
+	@echo ""
+	@echo "Landing (Next.js) Commands:"
+	@echo "  make landing-deps       Install landing dependencies"
+	@echo "  make landing-dev        Run landing in development mode"
+	@echo "  make landing-build      Build landing for production"
+	@echo "  make landing-docker-build  Build landing Docker image"
+	@echo "  make landing-docker-up  Start landing service"
 	@echo ""
 	@echo "API Testing Commands:"
 	@echo "  make test-api           Test core API endpoints"
@@ -525,3 +533,111 @@ status: ## Check project status
 	@echo ""
 	@echo "Services:"
 	@echo "  Backend: http://localhost:8081 ($(shell curl -s http://localhost:8081/healthz 2>/dev/null && echo 'running' || echo 'not running'))"
+	@echo "  Landing: http://localhost:3000 ($(shell curl -s http://localhost:3000/api/health 2>/dev/null && echo 'running' || echo 'not running'))"
+
+# =============================================================================
+# Landing (Next.js) Targets
+# =============================================================================
+
+landing-deps: ## Install landing dependencies
+	@echo "Installing landing dependencies..."
+	@which pnpm > /dev/null || ( \
+		echo "pnpm not found. Installing..." && \
+		npm install -g pnpm \
+	)
+	cd landing && pnpm install --frozen-lockfile
+	@echo "Landing dependencies installed!"
+
+landing-dev: ## Run landing in development mode
+	@echo "Starting landing in development mode..."
+	cd landing && pnpm dev
+
+landing-build: ## Build landing for production
+	@echo "Building landing for production..."
+	cd landing && pnpm build
+	@echo "Landing build complete!"
+
+landing-start: ## Start landing in production mode (requires build first)
+	@echo "Starting landing in production mode..."
+	cd landing && pnpm start
+
+landing-lint: ## Lint landing code
+	@echo "Linting landing code..."
+	cd landing && pnpm lint
+
+landing-clean: ## Clean landing build artifacts
+	@echo "Cleaning landing build artifacts..."
+	cd landing && rm -rf .next out node_modules/.cache
+	@echo "Landing cleanup complete!"
+
+landing-docker-build: ## Build landing Docker image
+	@echo "Building landing Docker image..."
+	docker build -t terrapeak-landing:latest \
+		--build-arg NODE_VERSION=20 \
+		--build-arg PNPM_VERSION=9 \
+		landing/
+	@echo "Landing Docker image built successfully!"
+	@echo "Image: terrapeak-landing:latest"
+
+landing-docker-run: ## Run landing Docker container standalone
+	@echo "Running landing in Docker..."
+	docker run -p 3000:3000 --name terrapeak-landing terrapeak-landing:latest
+
+landing-docker-up: ## Start landing service with docker-compose
+	@echo "Starting landing service..."
+	@echo "Using: $(COMPOSE_CMD)"
+	$(COMPOSE_CMD) up -d landing
+	@echo ""
+	@echo "Landing service started!"
+	@echo "Landing: http://localhost:3000"
+	@echo "Health check: http://localhost:3000/api/health"
+
+landing-docker-down: ## Stop landing service
+	@echo "Stopping landing service..."
+	@echo "Using: $(COMPOSE_CMD)"
+	$(COMPOSE_CMD) stop landing
+	@echo "Landing service stopped"
+
+landing-docker-logs: ## Show landing service logs
+	@echo "Showing landing service logs..."
+	@echo "Using: $(COMPOSE_CMD)"
+	$(COMPOSE_CMD) logs -f landing
+
+landing-docker-restart: ## Restart landing service
+	@echo "Restarting landing service..."
+	@echo "Using: $(COMPOSE_CMD)"
+	$(COMPOSE_CMD) restart landing
+	@echo "Landing service restarted"
+
+# =============================================================================
+# All Services Management
+# =============================================================================
+
+all-up: ## Start all services (registry + landing)
+	@echo "Starting all TerraPeak services..."
+	@echo "Using: $(COMPOSE_CMD)"
+	$(COMPOSE_CMD) up -d terrapeak landing
+	@echo ""
+	@echo "All services started!"
+	@echo "Registry: http://localhost:8081"
+	@echo "Landing:  http://localhost:3000"
+	@echo ""
+	@echo "Health checks:"
+	@echo "  Registry: http://localhost:8081/healthz"
+	@echo "  Landing:  http://localhost:3000/api/health"
+
+all-down: docker-down ## Stop all services (alias for docker-down)
+
+all-logs: ## Show logs for all services
+	@echo "Showing logs for all services..."
+	@echo "Using: $(COMPOSE_CMD)"
+	$(COMPOSE_CMD) logs -f
+
+all-restart: ## Restart all services
+	@echo "Restarting all services..."
+	@echo "Using: $(COMPOSE_CMD)"
+	$(COMPOSE_CMD) restart
+	@echo "All services restarted"
+
+all-clean: clean landing-clean ## Clean all build artifacts
+	@echo "All build artifacts cleaned!"
