@@ -1,14 +1,6 @@
 {
   "branches": [
-    "main",
-    {
-      "name": "feat/*",
-      "prerelease": "feat"
-    },
-    {
-      "name": "fix/*",
-      "prerelease": "fix"
-    }
+    "main"
   ],
   "repositoryUrl": "https://github.com/aliharirian/TerraPeak",
   "plugins": [
