@@ -1,4 +1,5 @@
 <div align="center">
+<img src="logo/logo.png" alt="My Image" width="200" />
 
 # TerraPeak
 
@@ -61,6 +62,42 @@ tar -xzf terrapeak-registry_linux_amd64.tar.gz
 ```
 
 For detailed installation methods, see [INSTALLATION.md](docs/INSTALLATION.md).
+
+## Demo
+
+Want to see TerraPeak in action? Try this quick demo:
+
+### 1. Create a Test Terraform Project
+
+```bash
+mkdir terrapeak-demo && cd terrapeak-demo
+
+cat > main.tf << 'EOF'
+terraform {
+  required_providers {
+    random = {
+      source  = "terraform.peaker.info/hashicorp/random"
+      version = "~> 3.0"
+    }
+  }
+}
+
+resource "random_string" "demo" {
+  length  = 16
+  special = false
+}
+
+output "random_value" {
+  value = random_string.demo.result
+}
+EOF
+```
+
+### 2. Test the TerraPeak
+
+```bash
+terraform init
+```
 
 ## Configuration
 
