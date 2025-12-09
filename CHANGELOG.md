@@ -1,3 +1,9 @@
+## [1.4.1](https://github.com/aliharirian/TerraPeak/compare/v1.4.0...v1.4.1) (2025-12-09)
+
+### 🐛 Bug Fixes
+
+* security path update Next.js to version 16.0.7 in package.json and pnpm-lock.yaml ([7aede31](https://github.com/aliharirian/TerraPeak/commit/7aede31694785bd65d56bcf27ee45801ee3b9593))
+
 ## [1.4.0](https://github.com/aliharirian/TerraPeak/compare/v1.3.1...v1.4.0) (2025-11-26)
 
 ### 🚀 Features
